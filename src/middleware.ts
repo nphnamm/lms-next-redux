@@ -9,6 +9,10 @@ export async function middleware(request: NextRequest) {
   // Public paths that don't require authentication
   const publicPaths = ['/login', '/register'];
   if (publicPaths.includes(request.nextUrl.pathname)) {
+    // If user is authenticated and tries to access login/register, redirect to dashboard
+    if (accessToken || refreshToken) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
     return NextResponse.next();
   }
 
@@ -26,9 +30,9 @@ export async function middleware(request: NextRequest) {
   if (refreshToken) {
     try {
       const refreshResponse = await authService.refreshToken();
-      if (refreshResponse.data.accessToken) {
+      if (refreshResponse.data?.data?.accessToken) {
         const response = NextResponse.next();
-        response.cookies.set('access_token', refreshResponse.data.accessToken, {
+        response.cookies.set('access_token', refreshResponse.data.data.accessToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'strict',

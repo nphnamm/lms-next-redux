@@ -1,0 +1,26 @@
+{
+  "common": {
+    "dashboard": "Bảng điều khiển",
+    "courseLibrary": "Thư viện khóa học",
+    "myLessons": "Bài học của tôi",
+    "schedule": "Lịch trình",
+    "discussions": "Thảo luận",
+    "profile": "Hồ sơ",
+    "settings": "Cài đặt",
+    "logout": "Đăng xuất",
+    "welcome": "Chào mừng trở lại",
+    "activeCourses": "Khóa học đang học",
+    "completedLessons": "Bài học đã hoàn thành",
+    "upcomingSessions": "Buổi học sắp tới",
+    "unreadMessages": "Tin nhắn chưa đọc",
+    "recentActivity": "Hoạt động gần đây",
+    "completedLesson": "Đã hoàn thành bài học",
+    "hoursAgo": "giờ trước",
+    "join": "Tham gia",
+    "language": "Ngôn ngữ",
+    "theme": "Giao diện",
+    "dark": "Tối",
+    "light": "Sáng",
+    "system": "Hệ thống"
+  }
+} 

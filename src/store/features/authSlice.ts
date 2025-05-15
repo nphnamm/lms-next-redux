@@ -15,6 +15,24 @@ const initialState: AuthState = {
   error: null,
 };
 
+interface MeResponse {
+  succeeded: boolean;
+  message: string | null;
+  code: string | null;
+  data: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string | null;
+  };
+  errors: any | null;
+  request: any | null;
+  returnUrl: string | null;
+}
+
 export const register = createAsyncThunk(
   'auth/register',
   async (credentials: { email: string; password: string; name: string }, { rejectWithValue }) => {
@@ -39,6 +57,7 @@ export const login = createAsyncThunk(
   }
 );
 
+
 export const verifyOTP = createAsyncThunk(
   'auth/verifyOTP',
   async (otp: string, { rejectWithValue }) => {
@@ -59,6 +78,20 @@ export const refreshToken = createAsyncThunk(
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Token refresh failed');
+    }
+  }
+);
+
+export const getMe = createAsyncThunk<MeResponse, void>(
+  'auth/getMe',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await authService.getMe();
+      console.log("response",response.data);
+      return response.data as any;
+
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to get user data');
     }
   }
 );
@@ -85,7 +118,6 @@ const authSlice = createSlice({
       })
       .addCase(register.fulfilled, (state, action) => {
         state.loading = false;
-        state.user = action.payload.user;
       })
       .addCase(register.rejected, (state, action) => {
         state.loading = false;
@@ -99,7 +131,7 @@ const authSlice = createSlice({
       .addCase(login.fulfilled, (state, action) => {
         state.loading = false;
         state.isAuthenticated = true;
-        state.user = action.payload.user;
+        state.user = action.payload.data?.user;
       })
       .addCase(login.rejected, (state, action) => {
         state.loading = false;
@@ -113,7 +145,7 @@ const authSlice = createSlice({
       .addCase(verifyOTP.fulfilled, (state, action) => {
         state.loading = false;
         state.isAuthenticated = true;
-        state.user = action.payload.user;
+        state.user = action.payload.data?.user;
       })
       .addCase(verifyOTP.rejected, (state, action) => {
         state.loading = false;
@@ -121,12 +153,28 @@ const authSlice = createSlice({
       })
       // Refresh Token
       .addCase(refreshToken.fulfilled, (state, action) => {
-        state.user = action.payload.user;
+        state.user = action.payload.data?.user; 
         state.isAuthenticated = true;
       })
       .addCase(refreshToken.rejected, (state) => {
         state.isAuthenticated = false;
         state.user = null;
+      })
+      // Get Me
+      .addCase(getMe.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(getMe.fulfilled, (state, action) => {
+        state.loading = false;
+        state.isAuthenticated = true;
+        state.user = action.payload.data;
+      })
+      .addCase(getMe.rejected, (state, action) => {
+        state.loading = false;
+        state.isAuthenticated = false;
+        state.user = null;
+        state.error = action.payload as string | null;
       });
   },
 });

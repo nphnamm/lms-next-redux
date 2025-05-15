@@ -1,19 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useRouter } from 'next/navigation';
-import { login } from '@/store/features/authSlice';
+import { getMe, login } from '@/store/features/authSlice';
 import { RootState, AppDispatch } from '@/store/store';
 import Link from 'next/link';
+import { useAppSelector } from '@/store/hooks';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
-  const { loading, error } = useSelector((state: RootState) => state.auth);
-
+  const [errorMessage, setErrorMessage] = useState('');
+  const { isAuthenticated, loading, error } = useAppSelector((state: RootState) => state.auth);
+  console.log("isAuthenticated",isAuthenticated);
+  
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -23,6 +27,15 @@ export default function LoginPage() {
       console.error('Login failed:', err);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
+    );
+  }
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">

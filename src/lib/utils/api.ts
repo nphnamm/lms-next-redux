@@ -16,6 +16,7 @@ class ApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
+      withCredentials: true
     });
 
     this.setupInterceptors();
@@ -50,9 +51,9 @@ class ApiClient {
           try {
             // Try to refresh the token
             const response = await authService.refreshToken();
-            if (response.data.accessToken) {
+            if (response.data?.data?.accessToken) {
               // Update the authorization header
-              originalRequest.headers.Authorization = `Bearer ${response.data.accessToken}`;
+              originalRequest.headers.Authorization = `Bearer ${response.data.data.accessToken}`;
               // Retry the original request
               return this.axiosInstance(originalRequest);
             }
