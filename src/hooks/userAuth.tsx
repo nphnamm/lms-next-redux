@@ -1,21 +1,19 @@
 import { getMe } from "@/store/features/authSlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { RootState } from "@/store/store";
-import React, { useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useEffect } from "react";
 
-function userAuth() {
-    const dispatch = useAppDispatch();
-    const { user } = useAppSelector((state: RootState) => state.auth);
-    useEffect(() => {
-        dispatch(getMe());
-    }, []);
-    console.log("user", user);
-    if (user) {
-        return true;
-    } else {
-        return false;
-    }
+// ✅ Đây là một custom hook hợp lệ
+function useUserAuth() {
+  const dispatch = useAppDispatch();
+  const { user } = useAppSelector((state: RootState) => state.auth);
+
+  useEffect(() => {
+    dispatch(getMe());
+  }, [dispatch]);
+
+  console.log("user", user);
+  return !!user; // true nếu có user, false nếu không
 }
 
-export default userAuth;
+export default useUserAuth;

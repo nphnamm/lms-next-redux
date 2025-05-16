@@ -1,9 +1,13 @@
-import { configureStore } from '@reduxjs/toolkit';
-import authReducer from './features/authSlice';
+import { configureStore } from "@reduxjs/toolkit";
+import authReducer from "./features/authSlice";
+import courseReducer from "./features/courseSlice";
+import lessonReducer from "./features/lessonSlice";
 
 const store = configureStore({
   reducer: {
     auth: authReducer,
+    courses: courseReducer,
+    lessons: lessonReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -14,4 +18,4 @@ const store = configureStore({
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
 
-export default store; 
+export default store;

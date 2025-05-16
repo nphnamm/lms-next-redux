@@ -1,8 +1,19 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Plus, Search, Filter, MoreVertical, Users, Clock, BookOpen } from 'lucide-react';
-import Link from 'next/link';
+import { useEffect, useState } from "react";
+import {
+  Plus,
+  Search,
+  Filter,
+  MoreVertical,
+  Users,
+  Clock,
+  BookOpen,
+} from "lucide-react";
+import Link from "next/link";
+import { RootState } from "@/store/store";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchCourses } from "@/store/features/courseSlice";
 
 interface Course {
   id: string;
@@ -10,63 +21,34 @@ interface Course {
   description: string;
   instructor: string;
   students: number;
-  status: 'active' | 'draft' | 'archived';
+  status: "active" | "draft" | "archived";
   duration?: string;
   lessons?: number;
 }
 
 export default function CoursesPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
-
-  // Mock data - replace with actual data from your API
-  const courses: Course[] = [
-    {
-      id: '1',
-      title: 'Introduction to Web Development',
-      description: 'Learn the basics of web development including HTML, CSS, and JavaScript',
-      instructor: 'John Doe',
-      students: 120,
-      status: 'active',
-      duration: '8 weeks',
-      lessons: 24
-    },
-    {
-      id: '2',
-      title: 'Advanced React Patterns',
-      description: 'Master advanced React patterns and best practices',
-      instructor: 'Jane Smith',
-      students: 85,
-      status: 'active',
-      duration: '6 weeks',
-      lessons: 18
-    },
-    {
-      id: '3',
-      title: 'Data Structures and Algorithms',
-      description: 'Comprehensive guide to data structures and algorithms',
-      instructor: 'Mike Johnson',
-      students: 150,
-      status: 'draft',
-      duration: '12 weeks',
-      lessons: 36
-    },
-  ];
-
-  const filteredCourses = courses.filter(course => {
-    const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         course.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || course.status === selectedStatus;
-    return matchesSearch && matchesStatus;
-  });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const dispatch = useAppDispatch();
+  const { courses, loading, error } = useAppSelector(
+    (state: RootState) => state.courses
+  );
+  console.log(courses);
+  useEffect(() => {
+    dispatch(fetchCourses());
+  }, []);
 
   return (
     <div className="space-y-8">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Course Management</h1>
-          <p className="text-muted-foreground mt-1">Manage and organize your courses</p>
+          <h1 className="text-3xl font-bold text-foreground">
+            Course Management
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Manage and organize your courses
+          </p>
         </div>
         <Link
           href="/courses/create"
@@ -103,7 +85,7 @@ export default function CoursesPage() {
 
       {/* Courses Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredCourses.map((course) => (
+        {courses.map((course) => (
           <Link
             key={course.id}
             href={`/courses/${course.id}`}
@@ -112,8 +94,12 @@ export default function CoursesPage() {
             <div className="p-6">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-foreground mb-1">{course.title}</h3>
-                  <p className="text-sm text-muted-foreground line-clamp-2">{course.description}</p>
+                  <h3 className="text-lg font-semibold text-foreground mb-1">
+                    {course.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground line-clamp-2">
+                    {course.description}
+                  </p>
                 </div>
                 <button
                   onClick={(e) => {
@@ -145,16 +131,28 @@ export default function CoursesPage() {
                 <div className="flex items-center">
                   <div className="h-8 w-8 rounded-full bg-accent flex items-center justify-center">
                     <span className="text-sm font-medium text-foreground">
-                      {course.instructor.split(' ').map(n => n[0]).join('')}
+                      {/* {course.instructor
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")} */}
                     </span>
                   </div>
-                  <span className="ml-2 text-sm text-muted-foreground">{course.instructor}</span>
+                  <span className="ml-2 text-sm text-muted-foreground">
+                    {/* {course.instructor} */}
+                  </span>
                 </div>
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
-                  ${course.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' : 
-                    course.status === 'draft' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100' : 
-                    'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100'}`}>
-                  {course.status.charAt(0).toUpperCase() + course.status.slice(1)}
+                <span
+                  className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
+                  ${
+                    course.status === "active"
+                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                      : course.status === "draft"
+                      ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
+                      : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100"
+                  }`}
+                >
+                  {/* {course.status.charAt(0).toUpperCase() +
+                    course.status.slice(1)} */}
                 </span>
               </div>
             </div>
@@ -163,15 +161,19 @@ export default function CoursesPage() {
       </div>
 
       {/* Empty State */}
-      {filteredCourses.length === 0 && (
+      {courses.length === 0 && (
         <div className="text-center py-12">
           <div className="bg-accent/50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
             <BookOpen className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-medium text-foreground mb-2">No courses found</h3>
-          <p className="text-muted-foreground">Try adjusting your search or filter to find what you're looking for.</p>
+          <h3 className="text-lg font-medium text-foreground mb-2">
+            No courses found
+          </h3>
+          <p className="text-muted-foreground">
+            Try adjusting your search or filter to find what you're looking for.
+          </p>
         </div>
       )}
     </div>
   );
-} 
+}

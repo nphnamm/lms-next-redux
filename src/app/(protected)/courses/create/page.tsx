@@ -1,55 +1,64 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, Upload, X } from 'lucide-react';
-import Link from 'next/link';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Upload, X } from "lucide-react";
+import Link from "next/link";
+import { RootState } from "@/store/store";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { createCourse } from "@/store/features/courseSlice";
+import toast from "react-hot-toast";
 
 interface CourseFormData {
   title: string;
   description: string;
-  duration: string;
-  lessons: number;
-  status: 'active' | 'draft' | 'archived';
-  thumbnail?: File;
-  thumbnailPreview?: string;
+  price: number;
+  instructorId: string;
+  image: string;
 }
 
 export default function CreateCoursePage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const user = useAppSelector((state: RootState) => state.auth.user);
   const [formData, setFormData] = useState<CourseFormData>({
-    title: '',
-    description: '',
-    duration: '',
-    lessons: 0,
-    status: 'draft',
+    title: "",
+    description: "",
+    price: 0,
+    instructorId: user?.id || "",
+    image: "",
   });
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const dispatch = useAppDispatch();
+  const [isCreateCourseLoading, setIsCreateCourseLoading] = useState(false);
+  const { courses, loading, error } = useAppSelector(
+    (state: RootState) => state.courses
+  );
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: name === 'lessons' ? parseInt(value) || 0 : value
+      [name]: name === "lessons" ? parseInt(value) || 0 : value,
     }));
   };
 
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        thumbnail: file,
-        thumbnailPreview: URL.createObjectURL(file)
+        image: URL.createObjectURL(file),
       }));
     }
   };
 
   const removeThumbnail = () => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      thumbnail: undefined,
-      thumbnailPreview: undefined
+      image: "",
     }));
   };
 
@@ -59,14 +68,27 @@ export default function CreateCoursePage() {
 
     try {
       // TODO: Implement your API call here
-      console.log('Form data:', formData);
-      
+      console.log("Form data:", formData);
+      const newFormData = new FormData();
+      newFormData.append("title", formData.title);
+      newFormData.append("description", formData.description);
+      newFormData.append("price", formData.price.toString());
+      newFormData.append("instructorId", formData.instructorId);
+      newFormData.append("image", formData.image);
+
+      dispatch(createCourse(newFormData));
+      setIsCreateCourseLoading(true);
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      router.push('/courses');
+      if (!error) {
+        toast.success("Course created successfully");
+        setTimeout(() => {
+          router.push("/courses");
+        }, 800);
+      }
+      // router.push("/courses");
     } catch (error) {
-      console.error('Error creating course:', error);
+      console.error("Error creating course:", error);
+      toast.error("Error creating course");
     } finally {
       setIsSubmitting(false);
     }
@@ -86,20 +108,26 @@ export default function CreateCoursePage() {
       </div>
 
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Create New Course</h1>
-        <p className="text-muted-foreground mt-1">Fill in the details to create a new course</p>
+        <h1 className="text-3xl font-bold text-foreground">
+          Create New Course
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Fill in the details to create a new course
+        </p>
       </div>
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Thumbnail Upload */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground">Course Thumbnail</label>
+          <label className="text-sm font-medium text-foreground">
+            Course Thumbnail
+          </label>
           <div className="flex items-center gap-4">
-            {formData.thumbnailPreview ? (
+            {formData.image ? (
               <div className="relative">
                 <img
-                  src={formData.thumbnailPreview}
+                  src={formData.image}
                   alt="Course thumbnail"
                   className="w-32 h-32 object-cover rounded-lg"
                 />
@@ -133,7 +161,10 @@ export default function CreateCoursePage() {
 
         {/* Title */}
         <div className="space-y-2">
-          <label htmlFor="title" className="text-sm font-medium text-foreground">
+          <label
+            htmlFor="title"
+            className="text-sm font-medium text-foreground"
+          >
             Course Title
           </label>
           <input
@@ -150,7 +181,10 @@ export default function CreateCoursePage() {
 
         {/* Description */}
         <div className="space-y-2">
-          <label htmlFor="description" className="text-sm font-medium text-foreground">
+          <label
+            htmlFor="description"
+            className="text-sm font-medium text-foreground"
+          >
             Description
           </label>
           <textarea
@@ -168,54 +202,23 @@ export default function CreateCoursePage() {
         {/* Duration and Lessons */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label htmlFor="duration" className="text-sm font-medium text-foreground">
-              Duration
+            <label
+              htmlFor="price"
+              className="text-sm font-medium text-foreground"
+            >
+              Price
             </label>
             <input
               type="text"
-              id="duration"
-              name="duration"
-              value={formData.duration}
+              id="price"
+              name="price"
+              value={formData.price}
               onChange={handleInputChange}
               placeholder="e.g., 8 weeks"
               required
               className="w-full px-4 py-2 bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
-
-          <div className="space-y-2">
-            <label htmlFor="lessons" className="text-sm font-medium text-foreground">
-              Number of Lessons
-            </label>
-            <input
-              type="number"
-              id="lessons"
-              name="lessons"
-              value={formData.lessons}
-              onChange={handleInputChange}
-              min="0"
-              required
-              className="w-full px-4 py-2 bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
-          </div>
-        </div>
-
-        {/* Status */}
-        <div className="space-y-2">
-          <label htmlFor="status" className="text-sm font-medium text-foreground">
-            Status
-          </label>
-          <select
-            id="status"
-            name="status"
-            value={formData.status}
-            onChange={handleInputChange}
-            className="w-full px-4 py-2 bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-          >
-            <option value="draft">Draft</option>
-            <option value="active">Active</option>
-            <option value="archived">Archived</option>
-          </select>
         </div>
 
         {/* Submit Button */}
@@ -228,13 +231,13 @@ export default function CreateCoursePage() {
           </Link>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={loading}
             className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? 'Creating...' : 'Create Course'}
+            {loading ? "Creating..." : "Create Course"}
           </button>
         </div>
       </form>
     </div>
   );
-} 
+}
