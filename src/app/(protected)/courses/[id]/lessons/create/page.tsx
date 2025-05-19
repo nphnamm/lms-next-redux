@@ -132,13 +132,8 @@ export default function CreateLessonPage({
               { id: "1", text: "True", isCorrect: false },
               { id: "2", text: "False", isCorrect: false },
             ]
-          : undefined,
-      matchingPairs:
-        type === "matching"
-          ? [
-              { id: "1", left: "", right: "" },
-              { id: "2", left: "", right: "" },
-            ]
+          : type === "matching"
+          ? [{ id: "1", text: "", isCorrect: false }]
           : undefined,
     };
     setLesson((prev) => ({
@@ -339,9 +334,9 @@ export default function CreateLessonPage({
         meta: { requestStatus: string };
         payload: LessonResponse;
       };
+      console.log("createResponse", createResponse);
       if (
-        createResponse.meta.requestStatus === "fulfilled" &&
-        createResponse.payload?.data?.id
+        createResponse.meta.requestStatus === "fulfilled" 
       ) {
         toast.success("Questions created successfully");
         setCreatedLessonId(createResponse.payload.data.id);
@@ -715,44 +710,23 @@ export default function CreateLessonPage({
                         <label className="text-sm font-medium text-foreground">
                           Matching Pairs
                         </label>
-                        <button
-                          type="button"
-                          onClick={() => addMatchingPair(question.id)}
-                          className="text-sm text-primary hover:text-primary/90"
-                        >
-                          Add Pair
-                        </button>
+
                       </div>
                       <div className="space-y-3">
-                        {question.matchingPairs?.map((pair) => (
+                        {question.options?.map((pair) => (
                           <div
                             key={pair.id}
                             className="flex items-center gap-3"
                           >
                             <input
                               type="text"
-                              value={pair.left}
+                              value={pair.text}
                               onChange={(e) =>
-                                updateMatchingPair(question.id, pair.id, {
-                                  left: e.target.value,
+                                updateOption(question.id, pair.id, {
+                                  text: e.target.value,
                                 })
                               }
-                              placeholder="Left item"
-                              required
-                              className="flex-1 px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            />
-                            <span className="text-muted-foreground">
-                              matches with
-                            </span>
-                            <input
-                              type="text"
-                              value={pair.right}
-                              onChange={(e) =>
-                                updateMatchingPair(question.id, pair.id, {
-                                  right: e.target.value,
-                                })
-                              }
-                              placeholder="Right item"
+                              placeholder="Answer"
                               required
                               className="flex-1 px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                             />

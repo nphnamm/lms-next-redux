@@ -28,7 +28,7 @@ export const fetchCourseById = createAsyncThunk(
   "courses/fetchCourseById",
   async (id: string) => {
     const response = await courseService.getCourseById(id);
-    return response.data?.course;
+    return response.data?.data;
   }
 );
 
@@ -36,7 +36,7 @@ export const createCourse = createAsyncThunk(
   "courses/createCourse",
   async (courseData: FormData) => {
     const response = await courseService.createCourse(courseData);
-    return response.data?.course;
+    return response.data?.data;
   }
 );
 
@@ -44,7 +44,7 @@ export const updateCourse = createAsyncThunk(
   "courses/updateCourse",
   async ({ id, courseData }: { id: string; courseData: Partial<Course> }) => {
     const response = await courseService.updateCourse(id, courseData);
-    return response.data?.course;
+    return response.data?.data;
   }
 );
 
@@ -60,7 +60,7 @@ export const fetchCoursesByCategory = createAsyncThunk(
   "courses/fetchCoursesByCategory",
   async (category: string) => {
     const response = await courseService.getCoursesByCategory(category);
-    return response.data?.courses || [];
+    return response.data?.data || [];
   }
 );
 
@@ -68,7 +68,7 @@ export const fetchCoursesByInstructor = createAsyncThunk(
   "courses/fetchCoursesByInstructor",
   async (instructorId: string) => {
     const response = await courseService.getCoursesByInstructor(instructorId);
-    return response.data?.courses || [];
+    return response.data?.data || [];
   }
 );
 
@@ -76,7 +76,7 @@ export const searchCourses = createAsyncThunk(
   "courses/searchCourses",
   async (query: string) => {
     const response = await courseService.searchCourses(query);
-    return response.data?.courses || [];
+    return response.data?.data || [];
   }
 );
 
@@ -100,7 +100,7 @@ const courseSlice = createSlice({
       })
       .addCase(fetchCourses.fulfilled, (state, action) => {
         state.loading = false;
-        state.courses = action.payload;
+        state.courses = action.payload as Course[];
       })
       .addCase(fetchCourses.rejected, (state, action) => {
         state.loading = false;
@@ -127,7 +127,7 @@ const courseSlice = createSlice({
       .addCase(createCourse.fulfilled, (state, action) => {
         state.loading = false;
         if (action.payload) {
-          state.courses.push(action.payload);
+          state.courses.push(action.payload as Course);
         }
       })
       .addCase(createCourse.rejected, (state, action) => {
@@ -143,13 +143,13 @@ const courseSlice = createSlice({
         state.loading = false;
         if (action.payload) {
           const index = state.courses.findIndex(
-            (course) => course.id === action.payload?.id
+            (course) => course.id === (action.payload as Course).id
           );
           if (index !== -1) {
-            state.courses[index] = action.payload;
+            state.courses[index] = action.payload as Course;
           }
-          if (state.currentCourse?.id === action.payload.id) {
-            state.currentCourse = action.payload;
+          if (state.currentCourse?.id === (action.payload as Course).id) {
+            state.currentCourse = action.payload as Course;
           }
         }
       })
@@ -182,7 +182,7 @@ const courseSlice = createSlice({
       })
       .addCase(fetchCoursesByCategory.fulfilled, (state, action) => {
         state.loading = false;
-        state.courses = action.payload;
+        state.courses = action.payload as Course[];
       })
       .addCase(fetchCoursesByCategory.rejected, (state, action) => {
         state.loading = false;
@@ -196,7 +196,7 @@ const courseSlice = createSlice({
       })
       .addCase(fetchCoursesByInstructor.fulfilled, (state, action) => {
         state.loading = false;
-        state.courses = action.payload;
+        state.courses = action.payload as Course[];
       })
       .addCase(fetchCoursesByInstructor.rejected, (state, action) => {
         state.loading = false;
@@ -210,7 +210,7 @@ const courseSlice = createSlice({
       })
       .addCase(searchCourses.fulfilled, (state, action) => {
         state.loading = false;
-        state.courses = action.payload;
+        state.courses = action.payload as Course[];
       })
       .addCase(searchCourses.rejected, (state, action) => {
         state.loading = false;

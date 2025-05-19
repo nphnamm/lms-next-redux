@@ -4,12 +4,10 @@ export interface Course {
   id: string;
   title: string;
   description: string;
-  instructor: string;
   price: number;
-  duration: number;
-  level: "beginner" | "intermediate" | "advanced";
-  category: string;
-  thumbnail: string;
+  isPublished: boolean;
+  imageUrl: string;
+  lessons: Lesson[];
   createdAt: string;
   updatedAt: string;
 }
@@ -28,6 +26,27 @@ export interface CreateCourseData {
 // Using type instead of interface to fix linter error
 export type UpdateCourseData = Partial<CreateCourseData>;
 
+export interface Lesson {
+  id: string,
+  title: string,
+  content: string,
+  order: number,
+  type: string,
+  isPublished: boolean,
+  createdAt: string,
+  updatedAt: string
+}
+
+interface CourseDetails {
+  succeeded: boolean,
+  message: string | null,
+  code: string | null,
+  data: Course,
+  errors: null,
+  request: null,
+  returnUrl: null,
+}
+
 interface CourseResponse {
   data?: {
     courses?: Course[];
@@ -43,7 +62,7 @@ const courseService = {
   },
 
   async getCourseById(id: string) {
-    const response = await apiClient.get<CourseResponse>(`/courses/${id}`);
+    const response = await apiClient.get<CourseDetails>(`/courses/${id}`);
     return response;
   },
 

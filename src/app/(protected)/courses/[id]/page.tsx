@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Plus,
@@ -12,70 +12,38 @@ import {
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { fetchCourseById } from "@/store/features/courseSlice";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { Course, Lesson } from "@/lib/services/courseService";
 
-interface Lesson {
-  id: string;
-  title: string;
-  duration: string;
-  status: "published" | "draft";
-}
 
-interface Course {
-  id: string;
-  title: string;
-  description: string;
-  instructor: string;
-  students: number;
-  status: "active" | "draft" | "archived";
-  duration: string;
-  lessons: number;
-  thumbnail?: string;
-}
 
-export default function CourseDetailPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+
+export default function CourseDetailPage(
+ ) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
+  const params = useParams();
+  const CourseId = params.id;
+  const { currentCourse } = useAppSelector((state) => state.courses);
+  const dispatch = useAppDispatch();
+  useEffect(() => {
+    dispatch(fetchCourseById(CourseId as string));
+  }, [CourseId, dispatch]);
 
+  useEffect(() => {
+    setCourse(currentCourse as Course);
+    setLessons(currentCourse?.lessons as Lesson[]);
+  }, [currentCourse]);
+  console.log("courseDetails", currentCourse);
+  const [course, setCourse] = useState<Course>();
+  const [lessons, setLessons] = useState<Lesson[]>([]);
   // Mock data - replace with actual API call
-  const course: Course = {
-    id: params.id,
-    title: "Introduction to Web Development",
-    description:
-      "Learn the basics of web development including HTML, CSS, and JavaScript. This comprehensive course covers everything from basic syntax to advanced concepts.",
-    instructor: "John Doe",
-    students: 120,
-    status: "active",
-    duration: "8 weeks",
-    lessons: 24,
-    thumbnail:
-      "https://images.unsplash.com/photo-1498050108023-c5249f4df085?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2072&q=80",
-  };
+
 
   // Mock lessons data - replace with actual API call
-  const lessons: Lesson[] = [
-    {
-      id: "1",
-      title: "Introduction to HTML",
-      duration: "45 min",
-      status: "published",
-    },
-    {
-      id: "2",
-      title: "CSS Fundamentals",
-      duration: "60 min",
-      status: "published",
-    },
-    {
-      id: "3",
-      title: "JavaScript Basics",
-      duration: "90 min",
-      status: "draft",
-    },
-  ];
+
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this course?")) return;
@@ -127,46 +95,34 @@ export default function CourseDetailPage({
         <div className="lg:col-span-2 space-y-6">
           <div>
             <h1 className="text-3xl font-bold text-foreground">
-              {course.title}
+              {course?.title}
             </h1>
-            <p className="text-muted-foreground mt-2">{course.description}</p>
+            <p className="text-muted-foreground mt-2">{course?.description}</p>
           </div>
 
           <div className="flex flex-wrap gap-6">
             <div className="flex items-center text-muted-foreground">
               <Users className="h-5 w-5 mr-2" />
-              {course.students} students
-            </div>
-            <div className="flex items-center text-muted-foreground">
-              <Clock className="h-5 w-5 mr-2" />
-              {course.duration}
+
             </div>
             <div className="flex items-center text-muted-foreground">
               <BookOpen className="h-5 w-5 mr-2" />
-              {course.lessons} lessons
+              {course?.lessons.length} lessons
             </div>
           </div>
 
           <div className="flex items-center">
             <div className="h-10 w-10 rounded-full bg-accent flex items-center justify-center">
-              <span className="text-sm font-medium text-foreground">
-                {course.instructor
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")}
-              </span>
+
             </div>
-            <span className="ml-3 text-muted-foreground">
-              {course.instructor}
-            </span>
           </div>
         </div>
 
         <div className="relative aspect-video rounded-xl overflow-hidden">
-          {course.thumbnail ? (
+          {course?.imageUrl ? (
             <img
-              src={course.thumbnail}
-              alt={course.title}
+              src={course?.imageUrl}
+              alt={course?.title}
               className="w-full h-full object-cover"
             />
           ) : (
@@ -192,7 +148,7 @@ export default function CourseDetailPage({
 
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="divide-y divide-border">
-            {lessons.map((lesson) => (
+            {lessons?.map((lesson) => (
               <div
                 key={lesson.id}
                 className="flex items-center justify-between p-4 hover:bg-accent/50 transition-colors"
@@ -206,21 +162,11 @@ export default function CourseDetailPage({
                       {lesson.title}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {lesson.duration}
+                      {lesson.content}
                     </p>
                   </div>
                 </div>
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                  ${
-                    lesson.status === "published"
-                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                      : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
-                  }`}
-                >
-                  {lesson.status.charAt(0).toUpperCase() +
-                    lesson.status.slice(1)}
-                </span>
+
               </div>
             ))}
           </div>
