@@ -7,6 +7,9 @@ import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { createLesson } from "@/store/features/lessonSlice";
 import toast from "react-hot-toast";
+import { createQuestions } from "@/store/features/questionSlice";
+import ReactMarkdown from "react-markdown";
+import dynamic from "next/dynamic";
 
 type QuestionType =
   | "multiple-choice"
@@ -35,6 +38,7 @@ interface Question {
   options?: Option[];
   matchingPairs?: MatchingPair[];
   correctAnswer?: string;
+  order?: number;
 }
 
 interface Lesson {
@@ -48,6 +52,20 @@ interface Lesson {
   questions: Question[];
 }
 
+interface LessonState {
+  lessons: Lesson[];
+  currentLesson: Lesson | null;
+  loading: boolean;
+  error: string | null;
+}
+
+interface LessonResponse {
+  data: {
+    id: string;
+    [key: string]: any;
+  };
+}
+
 const questionTypeToNumber = {
   "multiple-choice": 3,
   "true-false": 1,
@@ -55,6 +73,8 @@ const questionTypeToNumber = {
   "fill-blank": 2,
   text: 0,
 } as const;
+
+const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
 
 export default function CreateLessonPage({
   params,
@@ -68,9 +88,7 @@ export default function CreateLessonPage({
   const [selectedQuestionType, setSelectedQuestionType] =
     useState<QuestionType | null>(null);
   const [createdLessonId, setCreatedLessonId] = useState<string | null>(null);
-  const { lessons, isLoading, error } = useAppSelector(
-    (state) => state.lessons
-  );
+  const { lessons, loading, error } = useAppSelector((state) => state.lessons);
   const dispatch = useAppDispatch();
   const [lesson, setLesson] = useState<Lesson>({
     title: "",
@@ -82,6 +100,7 @@ export default function CreateLessonPage({
     type: 0,
     questions: [],
   });
+  const [autoIncrementOrder, setAutoIncrementOrder] = useState(true);
 
   const handleQuestionTypeSelect = (type: QuestionType) => {
     setSelectedQuestionType(type);
@@ -205,9 +224,64 @@ export default function CreateLessonPage({
     }));
   };
 
+  const addOption = (questionId: string) => {
+    setLesson((prev) => ({
+      ...prev,
+      questions: prev.questions.map((q) =>
+        q.id === questionId
+          ? {
+              ...q,
+              options: [
+                ...(q.options || []),
+                {
+                  id: Math.random().toString(36).substr(2, 9),
+                  text: "",
+                  isCorrect: false,
+                },
+              ],
+            }
+          : q
+      ),
+    }));
+  };
+
+  const removeOption = (questionId: string, optionId: string) => {
+    setLesson((prev) => ({
+      ...prev,
+      questions: prev.questions.map((q) =>
+        q.id === questionId
+          ? {
+              ...q,
+              options: q.options?.filter((opt) => opt.id !== optionId),
+            }
+          : q
+      ),
+    }));
+  };
+
+  const handleAutoIncrementToggle = (checked: boolean) => {
+    setAutoIncrementOrder(checked);
+    if (checked) {
+      setLesson((prev) => ({
+        ...prev,
+        questions: prev.questions.map((q) => ({ ...q, order: 0 })),
+      }));
+    }
+  };
+
   const handleCreateLesson = async () => {
     setIsSubmitting(true);
     try {
+      // If lesson is already created, just create questions
+      if (createdLessonId) {
+        if (lesson.questions.length > 0) {
+          await handleCreateQuestions(createdLessonId);
+        } else {
+          router.push(`/courses/${CourseId}`);
+        }
+        return;
+      }
+
       const lessonData = {
         title: lesson.title,
         content: lesson.content,
@@ -218,17 +292,21 @@ export default function CreateLessonPage({
           ? questionTypeToNumber[selectedQuestionType]
           : 0,
       };
-      console.log("lessonData", lessonData);
 
-      const response = await dispatch(createLesson({ lessonData }));
-      console.log("response", response);
-      if (response.meta.requestStatus === "fulfilled") {
+      const createResponse = (await dispatch(createLesson({ lessonData }))) as {
+        meta: { requestStatus: string };
+        payload: LessonResponse;
+      };
+      if (
+        createResponse.meta.requestStatus === "fulfilled" &&
+        createResponse.payload?.data?.id
+      ) {
         toast.success("Lesson created successfully");
-        setCreatedLessonId(response.payload.id);
+        setCreatedLessonId(createResponse.payload.data.id);
       }
-      // If there are questions, create them
+
       if (lesson.questions.length > 0) {
-        await handleCreateQuestions(response.payload.id);
+        await handleCreateQuestions(createResponse.payload?.data?.id);
       } else {
         setTimeout(() => {
           router.push(`/courses/${CourseId}`);
@@ -245,36 +323,34 @@ export default function CreateLessonPage({
     try {
       const questionsData = {
         lessonId,
-        lessonType: selectedQuestionType
-          ? questionTypeToNumber[selectedQuestionType]
-          : 0,
+        lessonType: 1, // Using type 1 for this format
         questions: lesson.questions.map((q) => ({
           text: q.text,
           options: q.options?.map((opt) => ({
             text: opt.text,
             isCorrect: opt.isCorrect,
           })),
-          matchingPairs: q.matchingPairs?.map((pair) => ({
-            left: pair.left,
-            right: pair.right,
-          })),
-          correctAnswer: q.correctAnswer,
         })),
       };
 
-      const response = await fetch("/api/questions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(questionsData),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create questions");
+      const createResponse = (await dispatch(
+        createQuestions({ questionsData })
+      )) as {
+        meta: { requestStatus: string };
+        payload: LessonResponse;
+      };
+      if (
+        createResponse.meta.requestStatus === "fulfilled" &&
+        createResponse.payload?.data?.id
+      ) {
+        toast.success("Questions created successfully");
+        setCreatedLessonId(createResponse.payload.data.id);
+        setTimeout(() => {
+          router.push(`/courses/${CourseId}`);
+        }, 1000);
+      } else {
+        toast.error("Failed to create questions");
       }
-
-      router.push(`/courses/${CourseId}`);
     } catch (error) {
       console.error("Error creating questions:", error);
     }
@@ -363,6 +439,7 @@ export default function CreateLessonPage({
               type="number"
               id="order"
               value={lesson.order}
+              disabled={autoIncrementOrder}
               onChange={(e) =>
                 setLesson((prev) => ({
                   ...prev,
@@ -375,25 +452,50 @@ export default function CreateLessonPage({
             />
           </div>
 
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="isPublished"
-              checked={lesson.isPublished}
-              onChange={(e) =>
+          <div className="flex items-center space-x-3">
+            <span className="text-sm font-medium text-foreground">
+              Publish Lesson
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={lesson.isPublished}
+              onClick={() =>
                 setLesson((prev) => ({
                   ...prev,
-                  isPublished: e.target.checked,
+                  isPublished: !prev.isPublished,
                 }))
               }
-              className="h-4 w-4 text-primary focus:ring-primary border-border rounded"
-            />
-            <label
-              htmlFor="isPublished"
-              className="text-sm font-medium text-foreground"
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                lesson.isPublished ? "bg-primary" : "bg-gray-300"
+              }`}
             >
-              Publish Lesson
-            </label>
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  lesson.isPublished ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+          <div className="flex items-center space-x-3">
+            <span className="text-sm font-medium text-foreground">
+              Auto-increment question order
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={autoIncrementOrder}
+              onClick={() => handleAutoIncrementToggle(!autoIncrementOrder)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                autoIncrementOrder ? "bg-primary" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  autoIncrementOrder ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
           </div>
         </div>
 
@@ -461,18 +563,20 @@ export default function CreateLessonPage({
           </div>
 
           {selectedQuestionType && (
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => addQuestion(selectedQuestionType)}
-                className="flex items-center px-4 py-2 text-sm font-medium text-primary hover:text-primary/90 transition-colors"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add{" "}
-                {selectedQuestionType.charAt(0).toUpperCase() +
-                  selectedQuestionType.slice(1)}{" "}
-                Question
-              </button>
+            <div className="sticky top-0 z-10 bg-background py-4 border-b border-border">
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => addQuestion(selectedQuestionType)}
+                  className="flex items-center px-4 py-2 text-sm font-medium text-primary hover:text-primary/90 transition-colors"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add{" "}
+                  {selectedQuestionType.charAt(0).toUpperCase() +
+                    selectedQuestionType.slice(1)}{" "}
+                  Question
+                </button>
+              </div>
             </div>
           )}
 
@@ -503,32 +607,32 @@ export default function CreateLessonPage({
                     <label className="text-sm font-medium text-foreground">
                       Question Text
                     </label>
-                    <input
-                      type="text"
-                      value={question.text}
-                      onChange={(e) =>
-                        updateQuestion(question.id, { text: e.target.value })
-                      }
-                      placeholder="Enter your question"
-                      required
-                      className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
+                    <div data-color-mode="light">
+                      <MDEditor
+                        value={question.text}
+                        onChange={(val) =>
+                          updateQuestion(question.id, { text: val || "" })
+                        }
+                        height={150}
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">
-                      Points
+                      Order
                     </label>
                     <input
                       type="number"
-                      value={question.points}
+                      value={question.order ?? 0}
                       onChange={(e) =>
                         updateQuestion(question.id, {
-                          points: parseInt(e.target.value) || 0,
+                          order: parseInt(e.target.value) || 0,
                         })
                       }
-                      min="1"
+                      min="0"
                       required
+                      disabled={autoIncrementOrder}
                       className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                     />
                   </div>
@@ -537,9 +641,20 @@ export default function CreateLessonPage({
                   {(question.type === "multiple-choice" ||
                     question.type === "true-false") && (
                     <div className="space-y-4">
-                      <label className="text-sm font-medium text-foreground">
-                        Options
-                      </label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium text-foreground">
+                          Options
+                        </label>
+                        {question.type === "multiple-choice" && (
+                          <button
+                            type="button"
+                            onClick={() => addOption(question.id)}
+                            className="text-sm text-primary hover:text-primary/90"
+                          >
+                            Add Option
+                          </button>
+                        )}
+                      </div>
                       <div className="space-y-3">
                         {question.options?.map((option) => (
                           <div
@@ -575,6 +690,19 @@ export default function CreateLessonPage({
                               required
                               className="flex-1 px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                             />
+                            {question.type === "multiple-choice" &&
+                              question.options &&
+                              question.options.length > 2 && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    removeOption(question.id, option.id)
+                                  }
+                                  className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
                           </div>
                         ))}
                       </div>
@@ -644,7 +772,13 @@ export default function CreateLessonPage({
                         value={question.correctAnswer}
                         onChange={(e) =>
                           updateQuestion(question.id, {
-                            correctAnswer: e.target.value,
+                            options: [
+                              {
+                                id: Math.random().toString(36).substr(2, 9),
+                                text: e.target.value,
+                                isCorrect: true,
+                              },
+                            ],
                           })
                         }
                         placeholder="Enter the correct answer"
@@ -663,7 +797,13 @@ export default function CreateLessonPage({
                         value={question.correctAnswer}
                         onChange={(e) =>
                           updateQuestion(question.id, {
-                            correctAnswer: e.target.value,
+                            options: [
+                              {
+                                id: Math.random().toString(36).substr(2, 9),
+                                text: e.target.value,
+                                isCorrect: true,
+                              },
+                            ],
                           })
                         }
                         placeholder="Enter a sample answer"

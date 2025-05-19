@@ -34,9 +34,9 @@ export const fetchLessonById = createAsyncThunk(
 
 export const createLesson = createAsyncThunk(
   "lessons/createLesson",
-  async ({ lessonData }: { lessonData: FormData }) => {
+  async ({ lessonData }: { lessonData: any }) => {
     const response = await lessonService.createLesson(lessonData);
-    return response.data?.lesson;
+    return response.data;
   }
 );
 

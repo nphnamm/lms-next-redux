@@ -50,7 +50,7 @@ const lessonService = {
     return response;
   },
 
-  async createLesson(lessonData: FormData) {
+  async createLesson(lessonData: any) {
     const response = await apiClient.post<LessonResponse>(
       `/lessons`,
       lessonData,
