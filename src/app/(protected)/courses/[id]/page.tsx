@@ -10,12 +10,19 @@ import {
   BookOpen,
   Edit2,
   Trash2,
+  MoreVertical,
 } from "lucide-react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCourseById } from "@/store/features/courseSlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { Course, Lesson } from "@/lib/services/courseService";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function CourseDetailPage() {
   const router = useRouter();
@@ -52,6 +59,12 @@ export default function CourseDetailPage() {
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleLessonDelete = async (lessonId: string) => {
+    if (!confirm("Are you sure you want to delete this lesson?")) return;
+    // TODO: Implement lesson delete functionality
+    console.log("Delete lesson:", lessonId);
   };
 
   return (
@@ -149,10 +162,12 @@ export default function CourseDetailPage() {
             {lessons?.map((lesson) => (
               <div
                 key={lesson.id}
-                onClick={() => router.push(`/lesson/${lesson.id}`)}
                 className="flex items-center justify-between p-4 hover:bg-accent/50 transition-colors"
               >
-                <div className="flex items-center gap-4">
+                <div 
+                  className="flex items-center gap-4 flex-1 cursor-pointer"
+                  onClick={() => router.push(`/lesson/${lesson.id}`)}
+                >
                   <div className="h-10 w-10 rounded-lg bg-accent flex items-center justify-center">
                     <BookOpen className="h-5 w-5 text-muted-foreground" />
                   </div>
@@ -165,6 +180,29 @@ export default function CourseDetailPage() {
                     </p>
                   </div>
                 </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="focus:outline-none">
+                    <div className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-accent">
+                      <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => router.push(`/courses/${params.id}/lessons/${lesson.id}/edit`)}
+                      className="cursor-pointer"
+                    >
+                      <Edit2 className="h-4 w-4 mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleLessonDelete(lesson.id)}
+                      className="cursor-pointer text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ))}
           </div>

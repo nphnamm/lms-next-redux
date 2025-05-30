@@ -155,7 +155,7 @@ export default function CreateLessonPage() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link
-          href={`/courses/${CourseId}/lessons`}
+          href={`/courses/${CourseId}`}
           className="flex items-center text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-5 w-5 mr-2" />

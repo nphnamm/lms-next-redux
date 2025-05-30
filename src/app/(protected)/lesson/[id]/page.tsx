@@ -2,11 +2,17 @@
 
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Clock, BookOpen, Edit2 } from "lucide-react";
+import { ArrowLeft, Clock, BookOpen, Edit2, MoreVertical, Trash, Copy } from "lucide-react";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchLessonById } from "@/store/features/lessonSlice";
 import dynamic from "next/dynamic";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
 const Markdown = dynamic(
@@ -145,9 +151,41 @@ export default function LessonDetailPage() {
                   <div key={exercise.id} className="border border-border rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="text-lg font-medium">{exercise.title}</h3>
-                      <span className="text-sm text-muted-foreground">
-                        {exercise.type}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">
+                          {exercise.type}
+                        </span>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="p-1 hover:bg-accent rounded-full">
+                              <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Link
+                                href={`/exercise/${exercise.id}/edit`}
+                                className="flex items-center w-full"
+                              >
+                                <Edit2 className="h-4 w-4 mr-2" />
+                                Edit Exercise
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <button className="flex items-center w-full" onClick={() => console.log('Duplicate exercise:', exercise.id)}>
+                                <Copy className="h-4 w-4 mr-2" />
+                                Duplicate
+                              </button>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive">
+                              <button className="flex items-center w-full" onClick={() => console.log('Delete exercise:', exercise.id)}>
+                                <Trash className="h-4 w-4 mr-2" />
+                                Delete
+                              </button>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
                     <p className="text-muted-foreground mb-4">{exercise.content}</p>
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-4">
