@@ -79,6 +79,10 @@ class ApiClient {
     return this.axiosInstance.post<T>(url, data, config);
   }
 
+  public async patch<T>(url: string, data = {}, config = {}) {
+    return this.axiosInstance.patch<T>(url, data, config);
+  }
+
   public async put<T>(url: string, data = {}, config = {}) {
     return this.axiosInstance.put<T>(url, data, config);
   }

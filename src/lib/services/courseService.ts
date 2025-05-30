@@ -15,36 +15,48 @@ export interface Course {
 export interface CreateCourseData {
   title: string;
   description: string;
-  instructor: string;
   price: number;
-  duration: number;
-  level: "beginner" | "intermediate" | "advanced";
+  instructorId: string;
+  image?: File;
+  level: number;
   category: string;
-  thumbnail: File;
+  tags?: string[];
+  prerequisites?: string[];
+  rating: number;
+  totalEnrollments: number;
+  syllabus?: string;
+  learningObjectives?: string;
+  requirements?: string;
+  targetAudience?: string;
 }
 
 // Using type instead of interface to fix linter error
 export type UpdateCourseData = Partial<CreateCourseData>;
 
 export interface Lesson {
-  id: string,
-  title: string,
-  content: string,
-  order: number,
-  type: string,
-  isPublished: boolean,
-  createdAt: string,
-  updatedAt: string
+  id: string;
+  title: string;
+  content: string;
+  order: number;
+  type: string;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GetCourseRequest {
+  includeLessons: boolean;
+  id: string;
 }
 
 interface CourseDetails {
-  succeeded: boolean,
-  message: string | null,
-  code: string | null,
-  data: Course,
-  errors: null,
-  request: null,
-  returnUrl: null,
+  succeeded: boolean;
+  message: string | null;
+  code: string | null;
+  data: Course;
+  errors: null;
+  request: null;
+  returnUrl: null;
 }
 
 interface CourseResponse {
@@ -61,8 +73,11 @@ const courseService = {
     return response;
   },
 
-  async getCourseById(id: string) {
-    const response = await apiClient.get<CourseDetails>(`/courses/${id}`);
+  async getCourseById(getCourseRequest: GetCourseRequest) {
+    const response = await apiClient.patch<CourseDetails>(
+      `/courses`,
+      getCourseRequest
+    );
     return response;
   },
 

@@ -1,10 +1,18 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { lessonService, Lesson } from "@/lib/services/lessonService";
+import { lessonService, Lesson, GetLessonIdRequest   } from "@/lib/services/lessonService";
+
+interface LessonResponse {
+  data: {
+    lesson?: Lesson;
+    lessons?: Lesson[];
+  };
+}
 
 interface LessonState {
   lessons: Lesson[];
   currentLesson: Lesson | null;
   loading: boolean;
+  success: boolean;
   error: string | null;
 }
 
@@ -12,6 +20,7 @@ const initialState: LessonState = {
   lessons: [],
   currentLesson: null,
   loading: false,
+  success: false,
   error: null,
 };
 
@@ -20,15 +29,15 @@ export const fetchLessonsByCourse = createAsyncThunk(
   "lessons/fetchLessonsByCourse",
   async (courseId: string) => {
     const response = await lessonService.getLessonsByCourse(courseId);
-    return response.data?.lessons || [];
+    return (response as LessonResponse).data?.lessons || [];
   }
 );
 
 export const fetchLessonById = createAsyncThunk(
   "lessons/fetchLessonById",
-  async ({ courseId, lessonId }: { courseId: string; lessonId: string }) => {
-    const response = await lessonService.getLessonById(courseId, lessonId);
-    return response.data?.lesson;
+  async (getLessonIdRequest: GetLessonIdRequest) => {
+    const response = await lessonService.getLessonById(getLessonIdRequest);
+    return response.data;
   }
 );
 
@@ -36,7 +45,7 @@ export const createLesson = createAsyncThunk(
   "lessons/createLesson",
   async ({ lessonData }: { lessonData: any }) => {
     const response = await lessonService.createLesson(lessonData);
-    return response.data;
+    return (response as unknown as { data: { data: Lesson } }).data.data;
   }
 );
 
@@ -56,7 +65,7 @@ export const updateLesson = createAsyncThunk(
       lessonId,
       lessonData
     );
-    return response.data?.lesson;
+    return (response as LessonResponse).data?.lesson;
   }
 );
 
@@ -78,7 +87,7 @@ export const reorderLessons = createAsyncThunk(
     lessonIds: string[];
   }) => {
     const response = await lessonService.reorderLessons(courseId, lessonIds);
-    return response.data?.lessons || [];
+    return (response as LessonResponse).data?.lessons || [];
   }
 );
 
@@ -98,7 +107,7 @@ export const uploadLessonResource = createAsyncThunk(
       lessonId,
       file
     );
-    return response.data?.lesson;
+    return (response as LessonResponse).data?.lesson;
   }
 );
 
@@ -151,7 +160,8 @@ const lessonSlice = createSlice({
       })
       .addCase(fetchLessonById.fulfilled, (state, action) => {
         state.loading = false;
-        state.currentLesson = action.payload || null;
+        state.currentLesson = action.payload.data || null;
+        console.log("currentLesson", action.payload);
       })
       .addCase(fetchLessonById.rejected, (state, action) => {
         state.loading = false;
@@ -160,12 +170,15 @@ const lessonSlice = createSlice({
       // Create lesson
       .addCase(createLesson.pending, (state) => {
         state.loading = true;
+        state.success = false;
         state.error = null;
       })
       .addCase(createLesson.fulfilled, (state, action) => {
         state.loading = false;
         if (action.payload) {
           state.lessons.push(action.payload);
+          state.success = true;
+          state.error = null;
         }
       })
       .addCase(createLesson.rejected, (state, action) => {

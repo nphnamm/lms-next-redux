@@ -21,7 +21,7 @@ const authService = {
     const response = await apiClient.post<RegisterResponse>('/auth/register', credentials);
     // Store the registration token temporarily
     if (response.data?.data?.token) {
-      Cookies.set('reg_token', response.data.data.token, { expires: 1 }); // Expires in 1 day
+      Cookies.set('reg_token', response.data.data.token,   { expires: 1 }); // Expires in 1 day
     }
     return response;
   },

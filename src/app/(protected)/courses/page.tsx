@@ -14,17 +14,7 @@ import Link from "next/link";
 import { RootState } from "@/store/store";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchCourses } from "@/store/features/courseSlice";
-
-interface Course {
-  id: string;
-  title: string;
-  description: string;
-  instructor: string;
-  students: number;
-  status: "active" | "draft" | "archived";
-  duration?: string;
-  lessons?: number;
-}
+import { Course } from "@/lib/services/courseService";
 
 export default function CoursesPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -115,15 +105,15 @@ export default function CoursesPage() {
               <div className="flex items-center gap-4 mb-4">
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Users className="h-4 w-4 mr-1" />
-                  {course.students} students
+                  {course.lessons.length} lessons
                 </div>
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Clock className="h-4 w-4 mr-1" />
-                  {course.duration}
+                  {course.price} USD
                 </div>
                 <div className="flex items-center text-sm text-muted-foreground">
                   <BookOpen className="h-4 w-4 mr-1" />
-                  {course.lessons} lessons
+                  {course.isPublished ? "Published" : "Draft"}
                 </div>
               </div>
 
@@ -131,28 +121,22 @@ export default function CoursesPage() {
                 <div className="flex items-center">
                   <div className="h-8 w-8 rounded-full bg-accent flex items-center justify-center">
                     <span className="text-sm font-medium text-foreground">
-                      {/* {course.instructor
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")} */}
+                      {course.title.charAt(0)}
                     </span>
                   </div>
                   <span className="ml-2 text-sm text-muted-foreground">
-                    {/* {course.instructor} */}
+                    {new Date(course.createdAt).toLocaleDateString()}
                   </span>
                 </div>
                 <span
                   className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
                   ${
-                    course.status === "active"
+                    course.isPublished
                       ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                      : course.status === "draft"
-                      ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
-                      : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100"
+                      : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
                   }`}
                 >
-                  {/* {course.status.charAt(0).toUpperCase() +
-                    course.status.slice(1)} */}
+                  {course.isPublished ? "Published" : "Draft"}
                 </span>
               </div>
             </div>

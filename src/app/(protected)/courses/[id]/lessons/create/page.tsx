@@ -1,366 +1,165 @@
 "use client";
 
-import { useState, use } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Trash2, GripVertical, Save } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, Upload, X, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
+import { RootState } from "@/store/store";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { createLesson } from "@/store/features/lessonSlice";
 import toast from "react-hot-toast";
-import { createQuestions } from "@/store/features/questionSlice";
-import ReactMarkdown from "react-markdown";
+import { Disclosure, Input } from "@headlessui/react";
 import dynamic from "next/dynamic";
 
-type QuestionType =
-  | "multiple-choice"
-  | "true-false"
-  | "matching"
-  | "fill-blank"
-  | "text";
+const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
 
-interface Option {
-  id: string;
-  text: string;
-  isCorrect?: boolean;
-}
-
-interface MatchingPair {
-  id: string;
-  left: string;
-  right: string;
-}
-
-interface Question {
-  id: string;
-  type: QuestionType;
-  text: string;
-  points: number;
-  options?: Option[];
-  matchingPairs?: MatchingPair[];
-  correctAnswer?: string;
-  order?: number;
-}
-
-interface Lesson {
+interface LessonFormData {
   title: string;
   content: string;
-  duration: string;
+  description: string;
   order: number;
   courseId: string;
   isPublished: boolean;
   type: number;
-  questions: Question[];
+  duration: number;
+  videoUrl: string;
+  resources: string;
+  keywords: string[];
+  completionRate: number | null;
+  viewCount: number | null;
+  notes: string | null;
+  isPreview: boolean;
+  autoIncrement: boolean;
 }
 
-interface LessonState {
-  lessons: Lesson[];
-  currentLesson: Lesson | null;
-  loading: boolean;
-  error: string | null;
-}
+const lessonTypes = [
+  { value: 0, label: "Text" },
+  { value: 1, label: "Video" },
+  { value: 2, label: "Quiz" },
+  { value: 3, label: "Assignment" },
+  { value: 4, label: "Discussion" },
+];
 
-interface LessonResponse {
-  data: {
-    id: string;
-    [key: string]: any;
-  };
-}
-
-const questionTypeToNumber = {
-  "multiple-choice": 3,
-  "true-false": 1,
-  matching: 4,
-  "fill-blank": 2,
-  text: 0,
-} as const;
-
-const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
-
-export default function CreateLessonPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const unwrappedParams = use(params);
-  const CourseId = unwrappedParams.id;
+export default function CreateLessonPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedQuestionType, setSelectedQuestionType] =
-    useState<QuestionType | null>(null);
-  const [createdLessonId, setCreatedLessonId] = useState<string | null>(null);
-  const { lessons, loading, error } = useAppSelector((state) => state.lessons);
-  const dispatch = useAppDispatch();
-  const [lesson, setLesson] = useState<Lesson>({
+  const params = useParams();
+  const CourseId = params.id as string;
+  const [formData, setFormData] = useState<LessonFormData>({
     title: "",
     content: "",
-    duration: "",
+    description: "",
     order: 0,
     courseId: CourseId,
     isPublished: false,
     type: 0,
-    questions: [],
+    duration: 0,
+    videoUrl: "",
+    resources: "",
+    keywords: [],
+    completionRate: null,
+    viewCount: null,
+    notes: null,
+    isPreview: false,
+    autoIncrement: false,
   });
-  const [autoIncrementOrder, setAutoIncrementOrder] = useState(true);
 
-  const handleQuestionTypeSelect = (type: QuestionType) => {
-    setSelectedQuestionType(type);
-    // Clear existing questions when switching types
-    setLesson((prev) => ({
-      ...prev,
-      questions: [],
-    }));
-  };
+  const dispatch = useAppDispatch();
+  const { loading, error, success } = useAppSelector(
+    (state: RootState) => state.lessons
+  );
 
-  const addQuestion = (type: QuestionType) => {
-    if (type !== selectedQuestionType) return;
-
-    const newQuestion: Question = {
-      id: Math.random().toString(36).substr(2, 9),
-      type,
-      text: "",
-      points: 1,
-      options:
-        type === "multiple-choice"
-          ? [
-              { id: "1", text: "", isCorrect: false },
-              { id: "2", text: "", isCorrect: false },
-              { id: "3", text: "", isCorrect: false },
-              { id: "4", text: "", isCorrect: false },
-            ]
-          : type === "true-false"
-          ? [
-              { id: "1", text: "True", isCorrect: false },
-              { id: "2", text: "False", isCorrect: false },
-            ]
-          : type === "matching"
-          ? [{ id: "1", text: "", isCorrect: false }]
-          : undefined,
-    };
-    setLesson((prev) => ({
-      ...prev,
-      questions: [...prev.questions, newQuestion],
-    }));
-  };
-
-  const updateQuestion = (questionId: string, updates: Partial<Question>) => {
-    setLesson((prev) => ({
-      ...prev,
-      questions: prev.questions.map((q) =>
-        q.id === questionId ? { ...q, ...updates } : q
-      ),
-    }));
-  };
-
-  const updateOption = (
-    questionId: string,
-    optionId: string,
-    updates: Partial<Option>
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
   ) => {
-    setLesson((prev) => ({
-      ...prev,
-      questions: prev.questions.map((q) =>
-        q.id === questionId
-          ? {
-              ...q,
-              options: q.options?.map((opt) =>
-                opt.id === optionId ? { ...opt, ...updates } : opt
-              ),
-            }
-          : q
-      ),
-    }));
-  };
-
-  const updateMatchingPair = (
-    questionId: string,
-    pairId: string,
-    updates: Partial<MatchingPair>
-  ) => {
-    setLesson((prev) => ({
-      ...prev,
-      questions: prev.questions.map((q) =>
-        q.id === questionId
-          ? {
-              ...q,
-              matchingPairs: q.matchingPairs?.map((pair) =>
-                pair.id === pairId ? { ...pair, ...updates } : pair
-              ),
-            }
-          : q
-      ),
-    }));
-  };
-
-  const addMatchingPair = (questionId: string) => {
-    setLesson((prev) => ({
-      ...prev,
-      questions: prev.questions.map((q) =>
-        q.id === questionId
-          ? {
-              ...q,
-              matchingPairs: [
-                ...(q.matchingPairs || []),
-                {
-                  id: Math.random().toString(36).substr(2, 9),
-                  left: "",
-                  right: "",
-                },
-              ],
-            }
-          : q
-      ),
-    }));
-  };
-
-  const removeQuestion = (questionId: string) => {
-    setLesson((prev) => ({
-      ...prev,
-      questions: prev.questions.filter((q) => q.id !== questionId),
-    }));
-  };
-
-  const addOption = (questionId: string) => {
-    setLesson((prev) => ({
-      ...prev,
-      questions: prev.questions.map((q) =>
-        q.id === questionId
-          ? {
-              ...q,
-              options: [
-                ...(q.options || []),
-                {
-                  id: Math.random().toString(36).substr(2, 9),
-                  text: "",
-                  isCorrect: false,
-                },
-              ],
-            }
-          : q
-      ),
-    }));
-  };
-
-  const removeOption = (questionId: string, optionId: string) => {
-    setLesson((prev) => ({
-      ...prev,
-      questions: prev.questions.map((q) =>
-        q.id === questionId
-          ? {
-              ...q,
-              options: q.options?.filter((opt) => opt.id !== optionId),
-            }
-          : q
-      ),
-    }));
-  };
-
-  const handleAutoIncrementToggle = (checked: boolean) => {
-    setAutoIncrementOrder(checked);
-    if (checked) {
-      setLesson((prev) => ({
+    const { name, value, type } = e.target;
+    setFormData((prev) => {
+      const newData = {
         ...prev,
-        questions: prev.questions.map((q) => ({ ...q, order: 0 })),
-      }));
-    }
+        [name]:
+          type === "checkbox"
+            ? (e.target as HTMLInputElement).checked
+            : type === "number"
+            ? Number(value)
+            : value,
+      };
+
+      // If auto-increment is checked, set order to 0
+      if (name === "autoIncrement" && (e.target as HTMLInputElement).checked) {
+        newData.order = 0;
+      }
+
+      return newData;
+    });
   };
 
-  const handleCreateLesson = async () => {
+  const handleKeywordsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const keywords = e.target.value
+      .split(",")
+      .map((keyword) => keyword.trim())
+      .filter(Boolean);
+    setFormData((prev) => ({ ...prev, keywords }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsSubmitting(true);
-    try {
-      // If lesson is already created, just create questions
-      if (createdLessonId) {
-        if (lesson.questions.length > 0) {
-          await handleCreateQuestions(createdLessonId);
-        } else {
-          router.push(`/courses/${CourseId}`);
-        }
-        return;
-      }
+    const lessonData = {
+      title: formData.title,
+      content: formData.content,
+      description: formData.description,
+      order: formData.order,
+      courseId: formData.courseId,
+      isPublished: formData.isPublished,
+      type: formData.type,
+      duration: formData.duration,
+      videoUrl: formData.videoUrl,
+      resources: formData.resources,
+      keywords: formData.keywords,
+      completionRate: formData.completionRate,
+      viewCount: formData.viewCount,
+      notes: formData.notes,
+      isPreview: formData.isPreview,
+    };
 
-      const lessonData = {
-        title: lesson.title,
-        content: lesson.content,
-        order: lesson.order,
-        courseId: lesson.courseId,
-        isPublished: lesson.isPublished,
-        type: selectedQuestionType
-          ? questionTypeToNumber[selectedQuestionType]
-          : 0,
-      };
-
-      const createResponse = (await dispatch(createLesson({ lessonData }))) as {
-        meta: { requestStatus: string };
-        payload: LessonResponse;
-      };
-      if (
-        createResponse.meta.requestStatus === "fulfilled" &&
-        createResponse.payload?.data?.id
-      ) {
-        toast.success("Lesson created successfully");
-        setCreatedLessonId(createResponse.payload.data.id);
-      }
-
-      if (lesson.questions.length > 0) {
-        await handleCreateQuestions(createResponse.payload?.data?.id);
-      } else {
-        setTimeout(() => {
-          router.push(`/courses/${CourseId}`);
-        }, 1000);
-      }
-    } catch (error) {
-      console.error("Error creating lesson:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
+    await dispatch(createLesson({ lessonData }));
   };
+  console.log('id',CourseId);
+  console.log(loading, error, success);
 
-  const handleCreateQuestions = async (lessonId: string) => {
-    try {
-      const questionsData = {
-        lessonId,
-        lessonType: 1, // Using type 1 for this format
-        questions: lesson.questions.map((q) => ({
-          text: q.text,
-          options: q.options?.map((opt) => ({
-            text: opt.text,
-            isCorrect: opt.isCorrect,
-          })),
-        })),
-      };
-
-      const createResponse = (await dispatch(
-        createQuestions({ questionsData })
-      )) as {
-        meta: { requestStatus: string };
-        payload: LessonResponse;
-      };
-      console.log("createResponse", createResponse);
-      if (
-        createResponse.meta.requestStatus === "fulfilled" 
-      ) {
-        toast.success("Questions created successfully");
-        setCreatedLessonId(createResponse.payload.data.id);
-        setTimeout(() => {
-          router.push(`/courses/${CourseId}`);
-        }, 1000);
-      } else {
-        toast.error("Failed to create questions");
+  useEffect(() => {
+    if (loading) {
+      toast.loading("Creating lesson...");
+      setIsSubmitting(true);
+      if(success){
+        toast.dismiss();
+        setIsSubmitting(false);
       }
-    } catch (error) {
-      console.error("Error creating questions:", error);
+    } 
+    if (success) {
+      toast.success("Lesson created successfully");
+      setTimeout(() => {
+        router.push(`/courses/${CourseId}`);
+      }, 800);
     }
-  };
+
+    if (error) {
+      toast.error("Error creating lesson");
+    }
+  }, [success, error, loading]);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="w-full mx-auto space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center gap-4">
         <Link
-          href={`/courses/${CourseId}`}
+          href={`/courses/${CourseId}/lessons`}
           className="flex items-center text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-5 w-5 mr-2" />
-          Back to Course
+          Back to Lessons
         </Link>
       </div>
 
@@ -369,433 +168,350 @@ export default function CreateLessonPage({
           Create New Lesson
         </h1>
         <p className="text-muted-foreground mt-1">
-          Add questions and content to your lesson
+          Fill in the details to create a new lesson
         </p>
       </div>
 
       {/* Form */}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleCreateLesson();
-        }}
-        className="space-y-8"
-      >
-        {/* Basic Info */}
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <label
-              htmlFor="title"
-              className="text-sm font-medium text-foreground"
-            >
-              Lesson Title
-            </label>
-            <input
-              type="text"
-              id="title"
-              value={lesson.title}
-              onChange={(e) =>
-                setLesson((prev) => ({ ...prev, title: e.target.value }))
-              }
-              placeholder="Enter lesson title"
-              required
-              className="w-full px-4 py-2 bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label
-              htmlFor="description"
-              className="text-sm font-medium text-foreground"
-            >
-              Description
-            </label>
-            <textarea
-              id="description"
-              value={lesson.content}
-              onChange={(e) =>
-                setLesson((prev) => ({ ...prev, content: e.target.value }))
-              }
-              placeholder="Enter lesson content"
-              required
-              rows={3}
-              className="w-full px-4 py-2 bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label
-              htmlFor="order"
-              className="text-sm font-medium text-foreground"
-            >
-              Order
-            </label>
-            <input
-              type="number"
-              id="order"
-              value={lesson.order}
-              disabled={autoIncrementOrder}
-              onChange={(e) =>
-                setLesson((prev) => ({
-                  ...prev,
-                  order: parseInt(e.target.value) || 0,
-                }))
-              }
-              min="0"
-              required
-              className="w-full px-4 py-2 bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
-          </div>
-
-          <div className="flex items-center space-x-3">
-            <span className="text-sm font-medium text-foreground">
-              Publish Lesson
-            </span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={lesson.isPublished}
-              onClick={() =>
-                setLesson((prev) => ({
-                  ...prev,
-                  isPublished: !prev.isPublished,
-                }))
-              }
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                lesson.isPublished ? "bg-primary" : "bg-gray-300"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  lesson.isPublished ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
-          </div>
-          <div className="flex items-center space-x-3">
-            <span className="text-sm font-medium text-foreground">
-              Auto-increment question order
-            </span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={autoIncrementOrder}
-              onClick={() => handleAutoIncrementToggle(!autoIncrementOrder)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                autoIncrementOrder ? "bg-primary" : "bg-gray-300"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  autoIncrementOrder ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
-          </div>
-        </div>
-
-        {/* Questions Section */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-foreground">Questions</h2>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuestionTypeSelect("text")}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${
-                  selectedQuestionType === "text"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Text
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuestionTypeSelect("true-false")}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${
-                  selectedQuestionType === "true-false"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                True/False
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuestionTypeSelect("fill-blank")}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${
-                  selectedQuestionType === "fill-blank"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Fill in Blank
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuestionTypeSelect("matching")}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${
-                  selectedQuestionType === "matching"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Matching
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuestionTypeSelect("multiple-choice")}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${
-                  selectedQuestionType === "multiple-choice"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Multiple Choice
-              </button>
-            </div>
-          </div>
-
-          {selectedQuestionType && (
-            <div className="sticky top-0 z-10 bg-background py-4 border-b border-border">
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => addQuestion(selectedQuestionType)}
-                  className="flex items-center px-4 py-2 text-sm font-medium text-primary hover:text-primary/90 transition-colors"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add{" "}
-                  {selectedQuestionType.charAt(0).toUpperCase() +
-                    selectedQuestionType.slice(1)}{" "}
-                  Question
-                </button>
-              </div>
-            </div>
-          )}
-
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Left Column - Required Fields */}
           <div className="space-y-6">
-            {lesson.questions.map((question, index) => (
-              <div
-                key={question.id}
-                className="bg-card border border-border rounded-lg p-6 space-y-4"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    <GripVertical className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-sm font-medium text-muted-foreground">
-                      Question {index + 1}
-                    </span>
-                  </div>
+            <div className="bg-card p-6 rounded-lg border border-border">
+              <h2 className="text-xl font-semibold mb-4">
+                Required Information
+              </h2>
+
+              {/* Title */}
+              <div className="space-y-2 mb-4">
+                <label
+                  htmlFor="title"
+                  className="text-sm font-medium text-foreground"
+                >
+                  Lesson Title <span className="text-destructive">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="title"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  placeholder="Enter lesson title"
+                  required
+                  className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+              </div>
+
+              {/* Type */}
+              <div className="space-y-2 mb-4">
+                <label
+                  htmlFor="type"
+                  className="text-sm font-medium text-foreground"
+                >
+                  Lesson Type <span className="text-destructive">*</span>
+                </label>
+                <select
+                  id="type"
+                  name="type"
+                  value={formData.type}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                >
+                  {lessonTypes.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Order */}
+              <div className="flex flex-col ">
+                <div className="flex items-center justify-between space-x-3">
+                  <span className="text-sm font-medium text-foreground">
+                    Auto-increment lesson order
+                  </span>
                   <button
                     type="button"
-                    onClick={() => removeQuestion(question.id)}
-                    className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                    role="switch"
+                    aria-checked={formData.autoIncrement}
+                    onClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        autoIncrement: !prev.autoIncrement,
+                        order: !prev.autoIncrement ? 0 : prev.order,
+                      }))
+                    }
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                      formData.autoIncrement ? "bg-primary" : "bg-gray-300"
+                    }`}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        formData.autoIncrement
+                          ? "translate-x-6"
+                          : "translate-x-1"
+                      }`}
+                    />
                   </button>
                 </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    {formData.autoIncrement
+                      ? "Order of Lesson will be auto-incremented"
+                      : "Order of Lesson will not be auto-incremented"}
+                  </p>
+                </div>
+                <div>
+                  <input
+                    type="number"
+                    id="order"
+                    name="order"
+                    disabled={formData.autoIncrement}
+                    value={formData.autoIncrement ? 0 : formData.order}
+                    onChange={handleInputChange}
+                    placeholder="Enter lesson order"
+                    required
+                    min="0"
+                    className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                </div>
+              </div>
 
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">
-                      Question Text
-                    </label>
-                    <div data-color-mode="light">
-                      <MDEditor
-                        value={question.text}
-                        onChange={(val) =>
-                          updateQuestion(question.id, { text: val || "" })
-                        }
-                        height={150}
-                      />
-                    </div>
-                  </div>
+              {/* Duration */}
+              <div className="space-y-2">
+                <label
+                  htmlFor="duration"
+                  className="text-sm font-medium text-foreground"
+                >
+                  Duration (minutes) <span className="text-destructive">*</span>
+                </label>
+                <input
+                  type="number"
+                  id="duration"
+                  name="duration"
+                  value={formData.duration}
+                  onChange={handleInputChange}
+                  placeholder="Enter lesson duration in minutes"
+                  required
+                  min="0"
+                  className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+              </div>
+            </div>
+          </div>
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">
-                      Order
-                    </label>
-                    <input
-                      type="number"
-                      value={question.order ?? 0}
-                      onChange={(e) =>
-                        updateQuestion(question.id, {
-                          order: parseInt(e.target.value) || 0,
-                        })
-                      }
-                      min="0"
-                      required
-                      disabled={autoIncrementOrder}
-                      className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
-                  </div>
+          {/* Right Column - Optional Fields */}
+          <div className="space-y-6">
+            {/* Description */}
+            <div className="bg-card p-6 rounded-lg border border-border">
+              <h2 className="text-xl font-semibold mb-4">Lesson Description</h2>
+              <div data-color-mode="light">
+                <MDEditor
+                  value={formData.description}
+                  onChange={(val) =>
+                    setFormData((prev) => ({ ...prev, description: val || "" }))
+                  }
+                  height={200}
+                />
+              </div>
+            </div>
 
-                  {/* Question Type Specific Fields */}
-                  {(question.type === "multiple-choice" ||
-                    question.type === "true-false") && (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium text-foreground">
-                          Options
-                        </label>
-                        {question.type === "multiple-choice" && (
-                          <button
-                            type="button"
-                            onClick={() => addOption(question.id)}
-                            className="text-sm text-primary hover:text-primary/90"
-                          >
-                            Add Option
-                          </button>
-                        )}
-                      </div>
-                      <div className="space-y-3">
-                        {question.options?.map((option) => (
-                          <div
-                            key={option.id}
-                            className="flex items-center gap-3"
-                          >
-                            <input
-                              type="radio"
-                              name={`correct-${question.id}`}
-                              checked={option.isCorrect}
-                              onChange={() => {
-                                const updatedOptions = question.options?.map(
-                                  (opt) => ({
-                                    ...opt,
-                                    isCorrect: opt.id === option.id,
-                                  })
-                                );
-                                updateQuestion(question.id, {
-                                  options: updatedOptions,
-                                });
-                              }}
-                              className="h-4 w-4 text-primary focus:ring-primary"
-                            />
-                            <input
-                              type="text"
-                              value={option.text}
-                              onChange={(e) =>
-                                updateOption(question.id, option.id, {
-                                  text: e.target.value,
-                                })
-                              }
-                              placeholder="Enter option text"
-                              required
-                              className="flex-1 px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            />
-                            {question.type === "multiple-choice" &&
-                              question.options &&
-                              question.options.length > 2 && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    removeOption(question.id, option.id)
-                                  }
-                                  className="p-1 text-muted-foreground hover:text-destructive transition-colors"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+            {/* Content */}
+            <div className="bg-card p-6 rounded-lg border border-border">
+              <h2 className="text-xl font-semibold mb-4">Lesson Content</h2>
+              <div data-color-mode="light">
+                <MDEditor
+                  value={formData.content}
+                  onChange={(val) =>
+                    setFormData((prev) => ({ ...prev, content: val || "" }))
+                  }
+                  height={300}
+                />
+              </div>
+            </div>
 
-                  {question.type === "matching" && (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium text-foreground">
-                          Matching Pairs
-                        </label>
-
-                      </div>
-                      <div className="space-y-3">
-                        {question.options?.map((pair) => (
-                          <div
-                            key={pair.id}
-                            className="flex items-center gap-3"
-                          >
-                            <input
-                              type="text"
-                              value={pair.text}
-                              onChange={(e) =>
-                                updateOption(question.id, pair.id, {
-                                  text: e.target.value,
-                                })
-                              }
-                              placeholder="Answer"
-                              required
-                              className="flex-1 px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {question.type === "fill-blank" && (
+            {/* Additional Information */}
+            <Disclosure defaultOpen={false}>
+              {({ open }) => (
+                <div className="bg-card rounded-lg border border-border">
+                  <Disclosure.Button className="w-full px-6 py-4 flex justify-between items-center">
+                    <h2 className="text-xl font-semibold">
+                      Additional Information
+                    </h2>
+                    {open ? (
+                      <ChevronUp className="h-5 w-5" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5" />
+                    )}
+                  </Disclosure.Button>
+                  <Disclosure.Panel className="px-6 pb-6 space-y-4">
+                    {/* Video URL */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">
-                        Correct Answer
+                      <label
+                        htmlFor="videoUrl"
+                        className="text-sm font-medium text-foreground"
+                      >
+                        Video URL
                       </label>
                       <input
-                        type="text"
-                        value={question.correctAnswer}
-                        onChange={(e) =>
-                          updateQuestion(question.id, {
-                            options: [
-                              {
-                                id: Math.random().toString(36).substr(2, 9),
-                                text: e.target.value,
-                                isCorrect: true,
-                              },
-                            ],
-                          })
-                        }
-                        placeholder="Enter the correct answer"
-                        required
+                        type="url"
+                        id="videoUrl"
+                        name="videoUrl"
+                        value={formData.videoUrl}
+                        onChange={handleInputChange}
+                        placeholder="Enter video URL"
                         className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                       />
                     </div>
-                  )}
 
-                  {question.type === "text" && (
+                    {/* Resources */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">
-                        Sample Answer
+                      <label
+                        htmlFor="resources"
+                        className="text-sm font-medium text-foreground"
+                      >
+                        Resources
                       </label>
-                      <textarea
-                        value={question.correctAnswer}
-                        onChange={(e) =>
-                          updateQuestion(question.id, {
-                            options: [
-                              {
-                                id: Math.random().toString(36).substr(2, 9),
-                                text: e.target.value,
-                                isCorrect: true,
-                              },
-                            ],
-                          })
-                        }
-                        placeholder="Enter a sample answer"
-                        rows={4}
-                        className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                      <input
+                        type="text"
+                        id="resources"
+                        name="resources"
+                        value={formData.resources}
+                        onChange={handleInputChange}
+                        placeholder="Enter resources"
+                        className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                       />
                     </div>
-                  )}
+
+                    {/* Keywords */}
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="keywords"
+                        className="text-sm font-medium text-foreground"
+                      >
+                        Keywords
+                      </label>
+                      <input
+                        type="text"
+                        id="keywords"
+                        name="keywords"
+                        value={formData.keywords.join(", ")}
+                        onChange={handleKeywordsChange}
+                        placeholder="Enter keywords separated by commas"
+                        className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
+                    </div>
+
+                    {/* Notes */}
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="notes"
+                        className="text-sm font-medium text-foreground"
+                      >
+                        Notes
+                      </label>
+                      <textarea
+                        id="notes"
+                        name="notes"
+                        value={formData.notes || ""}
+                        onChange={handleInputChange}
+                        placeholder="Enter additional notes"
+                        className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        rows={3}
+                      />
+                    </div>
+
+                    {/* Completion Rate */}
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="completionRate"
+                        className="text-sm font-medium text-foreground"
+                      >
+                        Completion Rate (%)
+                      </label>
+                      <input
+                        type="number"
+                        id="completionRate"
+                        name="completionRate"
+                        value={formData.completionRate || ""}
+                        onChange={handleInputChange}
+                        placeholder="Enter completion rate"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
+                    </div>
+
+                    {/* View Count */}
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="viewCount"
+                        className="text-sm font-medium text-foreground"
+                      >
+                        View Count
+                      </label>
+                      <input
+                        type="number"
+                        id="viewCount"
+                        name="viewCount"
+                        value={formData.viewCount || ""}
+                        onChange={handleInputChange}
+                        placeholder="Enter view count"
+                        min="0"
+                        className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
+                    </div>
+
+                    {/* Checkboxes */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="isPublished"
+                          name="isPublished"
+                          checked={formData.isPublished}
+                          onChange={handleInputChange}
+                          className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50"
+                        />
+                        <label
+                          htmlFor="isPublished"
+                          className="text-sm font-medium text-foreground"
+                        >
+                          Publish Lesson
+                        </label>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="isPreview"
+                          name="isPreview"
+                          checked={formData.isPreview}
+                          onChange={handleInputChange}
+                          className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50"
+                        />
+                        <label
+                          htmlFor="isPreview"
+                          className="text-sm font-medium text-foreground"
+                        >
+                          Preview Lesson
+                        </label>
+                      </div>
+                    </div>
+                  </Disclosure.Panel>
                 </div>
-              </div>
-            ))}
+              )}
+            </Disclosure>
           </div>
         </div>
 
         {/* Submit Button */}
         <div className="flex justify-end gap-4 pt-4">
           <Link
-            href={`/courses/${CourseId}`}
+            href={`/courses/${CourseId}/lessons`}
             className="px-6 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             Cancel
@@ -803,9 +519,8 @@ export default function CreateLessonPage({
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex items-center px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Save className="h-5 w-5 mr-2" />
             {isSubmitting ? "Creating..." : "Create Lesson"}
           </button>
         </div>

@@ -17,11 +17,7 @@ import { fetchCourseById } from "@/store/features/courseSlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { Course, Lesson } from "@/lib/services/courseService";
 
-
-
-
-export default function CourseDetailPage(
- ) {
+export default function CourseDetailPage() {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const params = useParams();
@@ -29,7 +25,7 @@ export default function CourseDetailPage(
   const { currentCourse } = useAppSelector((state) => state.courses);
   const dispatch = useAppDispatch();
   useEffect(() => {
-    dispatch(fetchCourseById(CourseId as string));
+    dispatch(fetchCourseById({ id: CourseId as string, includeLessons: true }));
   }, [CourseId, dispatch]);
 
   useEffect(() => {
@@ -41,9 +37,7 @@ export default function CourseDetailPage(
   const [lessons, setLessons] = useState<Lesson[]>([]);
   // Mock data - replace with actual API call
 
-
   // Mock lessons data - replace with actual API call
-
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this course?")) return;
@@ -103,18 +97,22 @@ export default function CourseDetailPage(
           <div className="flex flex-wrap gap-6">
             <div className="flex items-center text-muted-foreground">
               <Users className="h-5 w-5 mr-2" />
-
             </div>
             <div className="flex items-center text-muted-foreground">
               <BookOpen className="h-5 w-5 mr-2" />
-              {course?.lessons.length} lessons
+
+              {course?.lessons?.length ? (
+                <span className="text-green-500">
+                  {course?.lessons?.length} lessons
+                </span>
+              ) : (
+                <span className="text-red-500">No lessons</span>
+              )}
             </div>
           </div>
 
           <div className="flex items-center">
-            <div className="h-10 w-10 rounded-full bg-accent flex items-center justify-center">
-
-            </div>
+            <div className="h-10 w-10 rounded-full bg-accent flex items-center justify-center"></div>
           </div>
         </div>
 
@@ -151,6 +149,7 @@ export default function CourseDetailPage(
             {lessons?.map((lesson) => (
               <div
                 key={lesson.id}
+                onClick={() => router.push(`/lesson/${lesson.id}`)}
                 className="flex items-center justify-between p-4 hover:bg-accent/50 transition-colors"
               >
                 <div className="flex items-center gap-4">
@@ -166,7 +165,6 @@ export default function CourseDetailPage(
                     </p>
                   </div>
                 </div>
-
               </div>
             ))}
           </div>

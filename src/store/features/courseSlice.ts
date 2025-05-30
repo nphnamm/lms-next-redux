@@ -1,9 +1,10 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { courseService, Course } from "@/lib/services/courseService";
+import { courseService, Course, GetCourseRequest } from "@/lib/services/courseService";
 
 interface CourseState {
   courses: Course[];
   currentCourse: Course | null;
+  success: boolean;
   loading: boolean;
   error: string | null;
 }
@@ -11,6 +12,7 @@ interface CourseState {
 const initialState: CourseState = {
   courses: [],
   currentCourse: null,
+  success: false,
   loading: false,
   error: null,
 };
@@ -26,8 +28,8 @@ export const fetchCourses = createAsyncThunk(
 
 export const fetchCourseById = createAsyncThunk(
   "courses/fetchCourseById",
-  async (id: string) => {
-    const response = await courseService.getCourseById(id);
+  async (getCourseRequest: GetCourseRequest) => {
+    const response = await courseService.getCourseById(getCourseRequest);
     return response.data?.data;
   }
 );
@@ -117,21 +119,24 @@ const courseSlice = createSlice({
       })
       .addCase(fetchCourseById.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message || "Failed to fetch course";
+        state.error = "Failed to fetch course";
       })
       // Create course
       .addCase(createCourse.pending, (state) => {
         state.loading = true;
+        state.success = false;
         state.error = null;
       })
       .addCase(createCourse.fulfilled, (state, action) => {
         state.loading = false;
+        state.success = true;
         if (action.payload) {
           state.courses.push(action.payload as Course);
         }
       })
       .addCase(createCourse.rejected, (state, action) => {
         state.loading = false;
+        state.success = false;
         state.error = action.error.message || "Failed to create course";
       })
       // Update course

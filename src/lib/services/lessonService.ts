@@ -10,8 +10,44 @@ export interface Lesson {
   order: number;
   videoUrl?: string;
   resources?: string[];
+  isPublished: boolean;
+  completionRate?: number;
+  viewCount?: number;
+  notes?: string;
   createdAt: string;
   updatedAt: string;
+  exercises?: Exercise[];
+}
+
+export interface Exercise {
+  id: string;
+  title: string;
+  content: string;
+  order: number;
+  type: number;
+  status: number;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+  timeLimit?: number;
+  passingScore?: number;
+  retryLimit?: number;
+  allowPartialCredit?: boolean;
+  feedback?: string;
+  instructions?: string;
+  weight?: number;
+  isGraded?: boolean;
+  showAnswers?: boolean;
+  dueDate?: string;
+  hints?: string[];
+  averageScore?: number;
+  attemptCount?: number;
+  questions?: any[];
+}
+
+export interface GetLessonIdRequest {
+  id: string;
+  includeExercise?: boolean;
 }
 
 export interface CreateLessonData {
@@ -28,11 +64,13 @@ export interface CreateLessonData {
 export type UpdateLessonData = Partial<CreateLessonData>;
 
 export interface LessonResponse {
-  data: {
-    lessons?: Lesson[];
-    lesson?: Lesson;
-    message?: string;
-  };
+  succeeded: boolean;
+  message: string | null;
+  code: string | null;
+  data: Lesson;
+  errors: any | null;
+  request: any | null;
+  returnUrl: string | null;
 }
 
 const lessonService = {
@@ -43,9 +81,10 @@ const lessonService = {
     return response;
   },
 
-  async getLessonById(courseId: string, lessonId: string) {
-    const response = await apiClient.get<LessonResponse>(
-      `/courses/${courseId}/lessons/${lessonId}`
+  async getLessonById(getLessonIdRequest: GetLessonIdRequest) {
+    const response = await apiClient.patch<LessonResponse>(
+      `/lessons`,
+      getLessonIdRequest
     );
     return response;
   },
