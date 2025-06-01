@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Clock, BookOpen, Edit2, MoreVertical, Trash, Copy } from "lucide-react";
 import Link from "next/link";
@@ -13,6 +13,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { deleteExercise } from "@/store/features/exerciseSlice";
+import toast from "react-hot-toast";
 
 const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
 const Markdown = dynamic(
@@ -26,13 +37,46 @@ export default function LessonDetailPage() {
   const id = params.id as string;
   console.log('id', id)
   const dispatch = useAppDispatch();
-  const { currentLesson, loading, error } = useAppSelector(
+  const { currentLesson, loading, error, success } = useAppSelector(
     (state) => state.lessons
   );
-  console.log("currentLesson", currentLesson);
+  const { exercises, loading: exerciseLoading, error: exerciseError, success: exerciseSuccess } = useAppSelector(
+    (state) => state.exercises
+  );
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [exerciseToDelete, setExerciseToDelete] = useState<any>(null);
+
   useEffect(() => {
     dispatch(fetchLessonById({ id, includeExercise: true }));
-  }, []);
+  }, [dispatch, id]);
+
+  useEffect(() => {
+    if (exerciseSuccess) {
+      dispatch(fetchLessonById({ id, includeExercise: true }));
+      setIsDeleteModalOpen(false);
+      setExerciseToDelete(null);
+      toast.success('Exercise deleted successfully');
+    }
+  }, [exerciseSuccess, dispatch, id]);
+
+  console.log("currentLesson", currentLesson);
+
+  const handleDeleteClick = (exercise: any) => {
+    console.log('exercise', exercise)
+    setExerciseToDelete(exercise);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!exerciseToDelete) return;
+    
+    try {
+      console.log('Deleting exercise:', exerciseToDelete.id);
+      dispatch(deleteExercise(exerciseToDelete.id));
+    } catch (error) {
+      console.error('Error deleting exercise:', error);
+    }
+  };
 
   if (loading) {
     return <div>Loading...</div>;
@@ -178,7 +222,10 @@ export default function LessonDetailPage() {
                               </button>
                             </DropdownMenuItem>
                             <DropdownMenuItem className="text-destructive">
-                              <button className="flex items-center w-full" onClick={() => console.log('Delete exercise:', exercise.id)}>
+                              <button 
+                                className="flex items-center w-full" 
+                                onClick={() => handleDeleteClick(exercise)}
+                              >
                                 <Trash className="h-4 w-4 mr-2" />
                                 Delete
                               </button>
@@ -291,6 +338,31 @@ export default function LessonDetailPage() {
         </div>
       </div>
       
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Exercise</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this exercise?
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

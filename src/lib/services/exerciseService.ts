@@ -87,7 +87,10 @@ const exerciseService = {
 
   async deleteExercise(exerciseId: string) {
     const response = await apiClient.delete<ExerciseResponse>(
-      `/exercises/${exerciseId}`
+      `/exercises`,
+      {
+        data: { id: exerciseId },
+      }
     );
     return response;
   },

@@ -121,18 +121,13 @@ export default function CreateExercisePage() {
   const [importError, setImportError] = useState<string | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
 
-  // Reset success states when component mounts
-  useEffect(() => {
-    dispatch(resetExercisesSuccess());
-    dispatch(resetQuestionsSuccess());
-  }, [dispatch]);
+
 
   // Track previous success states
   const [prevExercisesSuccess, setPrevExercisesSuccess] = useState(false);
-  const [prevQuestionsSuccess, setPrevQuestionsSuccess] = useState(false);
 
   useEffect(() => {
-    if (exercisesSuccess && !prevExercisesSuccess) {
+    if (exercisesSuccess) {
       setIsCreatedExercise(true);
       toast.success("Exercise created successfully");
       setTimeout(() => {
@@ -140,16 +135,15 @@ export default function CreateExercisePage() {
       }, 1000);
     }
     setPrevExercisesSuccess(exercisesSuccess);
-  }, [exercisesSuccess, prevExercisesSuccess, lessonId]);
+  }, [exercisesSuccess, lessonId]);
 
   useEffect(() => {
-    if (questionsSuccess && !prevQuestionsSuccess) {
+    if (questionsSuccess) {
       setIsCreatedExercise(false);
       toast.success("Questions created successfully");
       router.push(`/lesson/${lessonId}`);
     }
-    setPrevQuestionsSuccess(questionsSuccess);
-  }, [questionsSuccess, prevQuestionsSuccess, lessonId, router]);
+  }, [questionsSuccess]);
 
   const handleQuestionTypeSelect = (type: QuestionType) => {
     setSelectedQuestionType(type);
@@ -1072,7 +1066,7 @@ export default function CreateExercisePage() {
 
       {/* Import Questions Modal */}
       {isImportModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 mt-[0px]">
           <div className="bg-background rounded-lg p-6 w-full max-w-2xl">
             <h3 className="text-xl font-semibold mb-4">Import Questions</h3>
             <div className="space-y-4">

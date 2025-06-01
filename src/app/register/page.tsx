@@ -1,179 +1,196 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { useRouter } from 'next/navigation';
-import { register, verifyOTP } from '@/store/features/authSlice';
-import { RootState, AppDispatch } from '@/store/store';
-import Link from 'next/link';
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  User,
+  Mail,
+  KeyRound,
+  ArrowRight,
+  Loader2,
+  UserPlus,
+  School,
+} from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function RegisterPage() {
-  const [step, setStep] = useState<'register' | 'verify'>('register');
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-  });
-  const [otp, setOtp] = useState('');
-  const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
-  const { loading, error } = useSelector((state: RootState) => state.auth);
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    role: "student",
+  });
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    try {
-      await dispatch(register(formData));
-      setStep('verify');
-    } catch (err) {
-      console.error('Registration failed:', err);
-    }
+    setIsLoading(true);
+    // Add your registration logic here
+    setTimeout(() => {
+      setIsLoading(false);
+      router.push("/login");
+    }, 1500);
   };
-
-  const handleVerifyOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await dispatch(verifyOTP(otp));
-      router.push('/dashboard');
-    } catch (err) {
-      console.error('OTP verification failed:', err);
-    }
-  };
-
-  if (step === 'verify') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-              Verify your email
-            </h2>
-            <p className="mt-2 text-center text-sm text-gray-600">
-              Please enter the OTP sent to your email
-            </p>
-          </div>
-          <form className="mt-8 space-y-6" onSubmit={handleVerifyOTP}>
-            <div>
-              <label htmlFor="otp" className="sr-only">
-                OTP
-              </label>
-              <input
-                id="otp"
-                name="otp"
-                type="text"
-                required
-                className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Enter OTP"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-              />
-            </div>
-
-            {error && (
-              <div className="text-red-500 text-sm text-center">{error}</div>
-            )}
-
-            <div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                {loading ? 'Verifying...' : 'Verify OTP'}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create your account
-          </h2>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleRegister}>
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="name" className="sr-only">
-                Full Name
-              </label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Full Name"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label htmlFor="email" className="sr-only">
-                Email address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
-                value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
-              />
-            </div>
-          </div>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-background to-background/80">
+      <div className="absolute inset-0 bg-grid-white/10 bg-grid-16 [mask-image:radial-gradient(white,transparent_70%)]" />
 
-          {error && (
-            <div className="text-red-500 text-sm text-center">{error}</div>
-          )}
-
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              {loading ? 'Creating account...' : 'Create account'}
-            </button>
-          </div>
-
-          <div className="text-sm text-center">
-            <Link
-              href="/login"
-              className="font-medium text-indigo-600 hover:text-indigo-500"
-            >
-              Already have an account? Sign in
-            </Link>
-          </div>
-        </form>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="relative w-full max-w-lg"
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 transform rotate-180 rounded-2xl blur-2xl" />
+        <Card className="border-none shadow-2xl relative bg-background/80 backdrop-blur-xl">
+          <CardHeader className="space-y-1 text-center">
+            <CardTitle className="text-3xl font-bold">Create an account</CardTitle>
+            <CardDescription className="text-lg">
+              Join our learning platform today
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    id="name"
+                    placeholder="Enter your full name"
+                    className="pl-10"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    className="pl-10"
+                    value={formData.email}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="role">Role</Label>
+                <Select
+                  value={formData.role}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, role: value })
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <School className="mr-2 h-5 w-5" />
+                    <SelectValue placeholder="Select your role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="student">Student</SelectItem>
+                    <SelectItem value="teacher">Teacher</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Create a password"
+                    className="pl-10"
+                    value={formData.password}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="Confirm your password"
+                    className="pl-10"
+                    value={formData.confirmPassword}
+                    onChange={(e) =>
+                      setFormData({ ...formData, confirmPassword: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+              </div>
+              <Button
+                type="submit"
+                className="w-full text-lg py-6 rounded-xl bg-primary/90 hover:bg-primary"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Creating account...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="mr-2 h-5 w-5" />
+                    Create Account
+                  </>
+                )}
+              </Button>
+            </form>
+          </CardContent>
+          <CardFooter>
+            <div className="text-sm w-full text-center">
+              Already have an account?{" "}
+              <Link
+                href="/login"
+                className="text-primary hover:underline font-medium inline-flex items-center"
+              >
+                Sign in
+                <ArrowRight className="ml-1 h-4 w-4" />
+              </Link>
+            </div>
+          </CardFooter>
+        </Card>
+      </motion.div>
     </div>
   );
 } 

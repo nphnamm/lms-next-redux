@@ -110,6 +110,18 @@ export const submitExercise = createAsyncThunk(
   }
 );
 
+export const deleteExercise = createAsyncThunk(
+  'exercises/delete',
+  async (exerciseId: string, { rejectWithValue }) => {
+    try {
+      const response = await exerciseService.deleteExercise(exerciseId);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to delete exercise');
+    }
+  }
+);
+
 const exerciseSlice = createSlice({
   name: 'exercises',
   initialState,
@@ -196,6 +208,20 @@ const exerciseSlice = createSlice({
         state.submission.loading = false;
         state.submission.error = action.payload as string;
         state.submission.success = false;
+      })
+      // Delete Exercise
+      .addCase(deleteExercise.pending, (state) => {
+        state.loading = true;
+        state.success = false;
+        state.error = null;
+      })
+      .addCase(deleteExercise.fulfilled, (state, action) => {
+        state.loading = false;
+        state.success = true;
+      })
+      .addCase(deleteExercise.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
       });
   },
 });

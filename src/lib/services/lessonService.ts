@@ -114,9 +114,12 @@ const lessonService = {
     return response;
   },
 
-  async deleteLesson(courseId: string, lessonId: string) {
+  async deleteLesson(lessonId: string) {
     const response = await apiClient.delete<LessonResponse>(
-      `/courses/${courseId}/lessons/${lessonId}`
+      `/lessons`,
+      {
+        data: { id: lessonId },
+      }
     );
     return response;
   },
@@ -154,7 +157,7 @@ const lessonService = {
     resourceUrl: string
   ) {
     const response = await apiClient.delete<LessonResponse>(
-      `/courses/${courseId}/lessons/${lessonId}/resources`,
+      `/lessons`,
       {
         data: { resourceUrl },
       }

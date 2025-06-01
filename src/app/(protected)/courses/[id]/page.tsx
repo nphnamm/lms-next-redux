@@ -23,25 +23,45 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { deleteLesson } from "@/store/features/lessonSlice";
+import toast from "react-hot-toast";
 
 export default function CourseDetailPage() {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [lessonToDelete, setLessonToDelete] = useState<Lesson | null>(null);
   const params = useParams();
   const CourseId = params.id;
   const { currentCourse } = useAppSelector((state) => state.courses);
+  const {currentLesson} = useAppSelector((state)=>state.lessons);
+  const [lessons,setLessons] = useState<Lesson[]>([]);
+  const {loading,error,success} = useAppSelector((state)=>state.lessons);
+
   const dispatch = useAppDispatch();
   useEffect(() => {
     dispatch(fetchCourseById({ id: CourseId as string, includeLessons: true }));
   }, [CourseId, dispatch]);
 
   useEffect(() => {
+
     setCourse(currentCourse as Course);
     setLessons(currentCourse?.lessons as Lesson[]);
-  }, [currentCourse]);
+
+  }, [currentCourse,lessons]);
+  
   console.log("courseDetails", currentCourse);
   const [course, setCourse] = useState<Course>();
-  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [lessonId, setLessonId] = useState<string>("");
   // Mock data - replace with actual API call
 
   // Mock lessons data - replace with actual API call
@@ -62,10 +82,22 @@ export default function CourseDetailPage() {
   };
 
   const handleLessonDelete = async (lessonId: string) => {
-    if (!confirm("Are you sure you want to delete this lesson?")) return;
-    // TODO: Implement lesson delete functionality
-    console.log("Delete lesson:", lessonId);
+    setLessonId(lessonId);
+    setIsDeleteDialogOpen(true);
   };
+
+  const handleConfirmDelete = async () => {
+    dispatch(deleteLesson({lessonId:lessonId}))
+  };
+
+  useEffect(() => {
+    if (success) {
+      dispatch(fetchCourseById({ id: CourseId as string, includeLessons: true }));
+      setIsDeleteDialogOpen(false);
+      setLessonToDelete(null);
+      toast.success('Lesson deleted successfully');
+    }
+  }, [success]);
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
@@ -208,6 +240,33 @@ export default function CourseDetailPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Lesson</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete &quot;{lessonToDelete?.title}&quot;? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

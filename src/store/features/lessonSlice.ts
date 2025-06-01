@@ -71,9 +71,9 @@ export const updateLesson = createAsyncThunk(
 
 export const deleteLesson = createAsyncThunk(
   "lessons/deleteLesson",
-  async ({ courseId, lessonId }: { courseId: string; lessonId: string }) => {
-    await lessonService.deleteLesson(courseId, lessonId);
-    return lessonId;
+  async ({ lessonId }: { lessonId: string }) => {
+    const response = await lessonService.deleteLesson(lessonId);
+    return (response as LessonResponse).data?.lesson;
   }
 );
 
@@ -122,7 +122,7 @@ export const deleteLessonResource = createAsyncThunk(
     lessonId: string;
     resourceUrl: string;
   }) => {
-    await lessonService.deleteLessonResource(courseId, lessonId, resourceUrl);
+    await lessonService.deleteLessonResource(courseId,lessonId,resourceUrl);
     return { lessonId, resourceUrl };
   }
 );
@@ -215,10 +215,11 @@ const lessonSlice = createSlice({
       })
       .addCase(deleteLesson.fulfilled, (state, action) => {
         state.loading = false;
+        state.success = true;
         state.lessons = state.lessons.filter(
-          (lesson) => lesson.id !== action.payload
+          (lesson) => lesson.id !== action.payload?.id
         );
-        if (state.currentLesson?.id === action.payload) {
+        if (state.currentLesson?.id === action.payload?.id) {
           state.currentLesson = null;
         }
       })
