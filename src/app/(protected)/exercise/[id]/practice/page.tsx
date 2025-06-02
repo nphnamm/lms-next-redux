@@ -160,7 +160,7 @@ export default function TakeExercisePage() {
         ) {
           handleSubmit();
         } else if (hasAnsweredCurrent && !isLastQuestion && !showResults) {
-          handleNext();
+          handleAnswer();
         }
       }
     };
